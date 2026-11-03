@@ -1284,8 +1284,11 @@ function loadFolderResume() {
 function saveCur() {
   if (!hasSrc) return;                                   /* 没在播就不写 */
   var isFolder = (folderMode && typeof curIdx === 'number' && curIdx >= 0);
+  /* via 很重要：只有真的拿到了目录句柄（showDirectoryPicker）才可能在刷新后重开。
+     网页版点「打开文件夹…」走的是 <input webkitdirectory>，拿不到句柄 —— 刷新后
+     根本没法把同一个文件夹重新打开，硬着头皮去续只会把主页藏掉、停在纯黑屏。 */
   var o = isFolder
-    ? { mode: 'folder', name: curFolderName, idx: curIdx, w: Date.now() }
+    ? { mode: 'folder', name: curFolderName, idx: curIdx, w: Date.now(), via: dirHandle ? 'handle' : 'input' }
     : { mode: 'file', src: curSrc, w: Date.now() };
   try { localStorage.setItem('mira.cur', JSON.stringify(o)); } catch (e) {}
 }
@@ -1471,7 +1474,15 @@ function openFromHome(u) {
 }
 function paintHome() {
   if (!homeEl || !histWrap) return;
+  /* 正在播片时绝不动界面：以前这里无条件 body.classList.add('home')，
+     于是「恢复默认设置 / 切换语言 / 清空记录」都会把首页状态盖到正在播放的画面上
+     （HUD、进度条、返回键全被 body.home 隐藏），看着就像卡死。 */
+  if (hasSrc) { document.body.classList.remove('home'); return; }
   document.body.classList.add('home');
+  /* 没片源 = 一定是主页，主页必须看得见。
+     以前只有 showHome() 会把 #empty 的 off 摘掉，任何其它走 paintHome() 的路径
+     （刷新续播失败等）都会停在「#empty 藏着 + 视频空着」= 纯黑屏。 */
+  empty.classList.remove('off');
   var rows = histRows();
   while (histWrap.firstChild) histWrap.removeChild(histWrap.firstChild);
   if (!rows.length) {
@@ -2153,9 +2164,17 @@ window.addEventListener('wheel', function (e) {
 }, { passive: false });
 
 /* ── 画面几何：比例 / 旋转 / 缩放 ── */
+var lvTries = 0;
 function layoutVideo() {
   var W = stage.clientWidth, H = stage.clientHeight;
-  if (!W || !H) { requestAnimationFrame(layoutVideo); return; }   /* 尺寸还没就绪 → 下一帧再算，避免算出 0 尺寸旧几何 */
+  if (!W || !H) {
+    /* 尺寸还没就绪 → 下一帧再算，避免算出 0 尺寸旧几何。
+       但必须封顶：窗口被最小化 / 标签页在后台时 inset:0 的 #stage 可能一直是 0，
+       无上限自递归会一直空转 rAF（把主线程拖满 = 整页像卡死）。 */
+    if (lvTries++ < 40) requestAnimationFrame(layoutVideo);
+    return;
+  }
+  lvTries = 0;
   var rot = ((SET.rotate % 360) + 360) % 360;
   var swap = (rot === 90 || rot === 270);
   var z = (SET.zoom || 100) / 100;
@@ -2186,12 +2205,17 @@ function layoutVideo() {
    ⚠️ 关键：none 和 '' 必须拆到两帧里。写在同一个同步任务里会被 Chrome
    合并成"净零变化"（先藏又立刻显示 = 没变），层根本不重建，bug 就治不住。 */
 function fixVideoLayer() {
-  layoutVideo();
+  /* 无论如何都要把 display 恢复回来 —— 以前只有一条 rAF 链，中间任何一步没跑到
+     （页面切到后台 rAF 被节流、回调里抛异常）视频就永久 display:none = 纯黑屏。 */
+  var restore = function () {
+    try { v.style.display = ''; layoutVideo(); } catch (e) {}
+  };
+  try { layoutVideo(); } catch (e) {}
   v.style.display = 'none';
   requestAnimationFrame(function () {
-    v.style.display = '';
-    requestAnimationFrame(function () { layoutVideo(); });
+    requestAnimationFrame(restore);
   });
+  setTimeout(restore, 300);          /* 兜底：rAF 不保证一定跑得到 */
 }
 
 /* ── 播放控制 ── */
@@ -2670,15 +2694,20 @@ homeOpen.onclick   = function () { pick.click(); };
 homeFolder.onclick = function () { pickDir.click(); };
 document.getElementById('homeBtn').addEventListener('click', showHome);
 pick.onchange = function (e) {
+  /* ⚠️ FileList 是「活」的：pick.value = '' 会把它当场清空（实测 length 2 → 0）。
+     所以必须先把 File 复制进普通数组，再清空。以前是先清空 → fs 变空 → 直接 return，
+     表现就是「打开视频…」点了完全没反应；「打开文件夹…」正常，因为那边是后清空。 */
   var fs = e.target.files;
+  if (!fs || !fs.length) { pick.value = ''; return; }
+  var files = [];
+  for (var i = 0; i < fs.length; i++) files.push(fs[i]);
   pick.value = '';                                  /* 允许再次选同一个文件 */
-  if (!fs || !fs.length) return;
-  if (fs.length === 1) {
+  if (files.length === 1) {
     LIST = []; buildList();
-    load(URL.createObjectURL(fs[0]), epi(stem(fs[0].name)));
+    load(URL.createObjectURL(files[0]), epi(stem(files[0].name)));
   } else {                                           /* 一次选多个 → 直接当播放列表 */
     var items = [];
-    for (var i = 0; i < fs.length; i++) items.push({ f: fs[i], p: fs[i].name });
+    for (var j = 0; j < files.length; j++) items.push({ f: files[j], p: files[j].name });
     playDrop(items, '');
   }
 };
@@ -2929,10 +2958,12 @@ function boot() {
         (Date.now() - (cur.w || 0)) < 180000) {
       src = cur.src;                       /* 单文件：直接续当前这一部 */
     } else if (cur && cur.mode === 'folder' &&
+               cur.via !== 'input' &&                    /* 没句柄的文件夹（网页版选目录）刷新续不了，别装 */
                (Date.now() - (cur.w || 0)) < 43200000 &&
                (dirHandle || window.showDirectoryPicker)) {
-      empty.classList.add('off');          /* 先藏住主页，避免刷新瞬间主页闪一下 */
-      document.body.classList.remove('home');
+      /* 不再「先把主页藏起来」：以前这里 optimistic 地藏掉 #empty，只要续播没成
+         （拿不到句柄 / 用户拒了权限 / IndexedDB 里没记录）就停在「主页藏着 + 没画面」= 纯黑屏。
+         现在让主页正常显示，等 resumeFolder 真的把片子装上，load() 自己会把 #empty 收起来。 */
       resumeFolder(cur);   /* 异步：重新打开上次那个文件夹，接着上次那一集放 */
       return false;        /* boot 先返回，真正的续播由 resumeFolder 接管 */
     } else {
