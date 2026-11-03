@@ -1793,20 +1793,41 @@ function epi(name) {
   return show ? show + ' ' + code : code;
 }
 
-/* ── 闲置 0.2 秒 → 控件全没；鼠标一动 → 立刻回来 ── */
+/* ── 闲置 0.8 秒 → 控件全没；鼠标一动 → 立刻回来 ──
+   ⚠️ 这里踩过两个坑，都是靠 headless 探针数「body class 被改写多少次」实测出来的：
+   1. classList.remove('idle') 在 idle 本来就不存在时，**依然会把 class 属性整个重写一遍**。
+      鼠标一秒能来上百个 mousemove，等于一秒上百次「整棵 body 子树样式失效」；
+      而这页上还压着两块 backdrop-filter 玻璃和一层带 transform 的视频，
+      Chrome 只能不停重新合成视频层 —— 用户看到的就是「鼠标一动屏幕一闪一闪」。
+      实测：300 次鼠标移动 → body class 被重写 304 次。
+      所以改成**先判断再改**，值没变就一个字节都不碰 DOM。
+   2. 原来闲置 200ms 就收控件，手搭在触控板上微动一下控件就闪一次，看着就是不停闪。
+      改成 800ms：停下来收得够快，动起来不闪。 */
+var IDLE_MS = 800, uiStamp = 0;
+function setIdle(on) {
+  if (document.body.classList.contains('idle') === on) return;   /* 值没变 → 不碰 DOM */
+  document.body.classList.toggle('idle', on);
+}
 function showUI() {
-  document.body.classList.remove('idle');
+  /* 本来就没闲置、又刚处理过（100ms 内）→ 直接丢掉，不重排定时器。
+     真的正在闲置时不省这一步：鼠标一落地就要立刻把控件叫回来。 */
+  var now = Date.now();
+  if (!document.body.classList.contains('idle') && now - uiStamp < 100) return;
+  uiStamp = now;
+  setIdle(false);
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(idleTick, 200);
+  idleTimer = setTimeout(idleTick, IDLE_MS);
 }
 function idleTick() {
-  /* 主页上永远不藏光标 —— 那是个能点的窗口，不是正在放片 */
-  if (!hasSrc || dragging || plist.classList.contains('on') || setp.classList.contains('on') || seek.matches(':hover')) {
-    document.body.classList.remove('idle');
+  /* 主页上永远不藏光标 —— 那是个能点的窗口，不是正在放片。
+     没片源时直接收工，不再每 200ms 自旋（以前在主页上白白每秒制造 5 次整页样式失效）。 */
+  if (!hasSrc) { setIdle(false); return; }
+  if (dragging || plist.classList.contains('on') || setp.classList.contains('on') || seek.matches(':hover')) {
+    setIdle(false);
     idleTimer = setTimeout(idleTick, 200);
     return;
   }
-  document.body.classList.add('idle');
+  setIdle(true);
 }
 window.addEventListener('mousemove', showUI, { passive: true });
 window.addEventListener('mousedown', showUI, { passive: true });
