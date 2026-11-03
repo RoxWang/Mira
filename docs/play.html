@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mira · 在线播放</title>
+<link rel="icon" href="mira-icon.png">
+<style>
+  :root { color-scheme: dark;
+    --bg1:#0b0a1f; --bg2:#150f33; --bg3:#241a4d;
+    --purple:#8b5cf6; --pink:#ff5c8a; --ink:#e9e9f2; --sub:#a9a6c4; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; color:var(--ink);
+    font:15px/1.6 -apple-system,"PingFang SC",system-ui,sans-serif;
+    background:radial-gradient(120% 90% at 50% 30%, var(--bg3) 0%, var(--bg2) 46%, var(--bg1) 100%) fixed;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; }
+  .logo { width:96px; height:96px; border-radius:30%;
+    box-shadow:0 16px 44px rgba(139,92,246,.4); margin-bottom:18px; }
+  h1 { font-weight:600; letter-spacing:.5px; margin:0; }
+  .sub { color:var(--sub); margin-top:6px; max-width:520px; }
+  #drop { margin-top:24px; width:min(680px,92vw); height:230px; border:2px dashed rgba(255,255,255,.22);
+    border-radius:18px; display:flex; align-items:center; justify-content:center;
+    text-align:center; color:var(--sub); transition:.15s; cursor:pointer; background:rgba(255,255,255,.04); }
+  #drop.over { border-color:var(--purple); color:#dcd6ff; background:rgba(139,92,246,.14); }
+  video { margin-top:20px; max-width:min(880px,94vw); max-height:60vh; border-radius:14px; background:#000; display:none;
+    box-shadow:0 18px 50px rgba(0,0,0,.5); }
+  .row { margin-top:16px; display:flex; gap:8px; width:min(680px,92vw); }
+  input[type=url] { flex:1; padding:11px 13px; border-radius:11px; border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.06); color:#eee; }
+  input[type=url]:focus { outline:none; border-color:var(--purple); }
+  button { padding:11px 18px; border:0; border-radius:11px;
+    background:linear-gradient(120deg,var(--purple),var(--pink)); color:#0b0a1f; font-weight:700; cursor:pointer; }
+  a.back { margin-top:26px; color:#a99fe0; text-decoration:none; font-size:13px; }
+</style>
+</head>
+<body>
+  <img class="logo" src="mira-icon.png" alt="Mira">
+  <h1>Mira</h1>
+  <div class="sub">把视频拖进来，或贴一个视频网址 —— 即开即玩，不安装、不上传</div>
+  <div id="drop">拖一个视频文件到这里<br>（mp4 / mkv / webm / mov …）</div>
+  <div class="row">
+    <input id="url" type="url" placeholder="或粘贴视频直链，如 https://.../movie.mp4">
+    <button id="go">播放</button>
+  </div>
+  <video id="v" controls></video>
+  <a class="back" href="index.html">← 返回 Mira 主页</a>
+<script>
+  var drop = document.getElementById('drop'), v = document.getElementById('v');
+  function playFile(f) {
+    var u = URL.createObjectURL(f);
+    v.src = u; v.style.display = 'block'; v.play().catch(function () {});
+  }
+  function playUrl(s) {
+    if (!s) return;
+    v.src = s; v.style.display = 'block'; v.play().catch(function () {});
+  }
+  ['dragenter', 'dragover'].forEach(function (e) {
+    drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (e) {
+    drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.remove('over'); });
+  });
+  drop.addEventListener('drop', function (ev) {
+    var f = ev.dataTransfer.files[0]; if (f) playFile(f);
+  });
+  document.getElementById('go').addEventListener('click', function () {
+    playUrl(document.getElementById('url').value.trim());
+  });
+  drop.addEventListener('click', function () {
+    var i = document.createElement('input'); i.type = 'file'; i.accept = 'video/*';
+    i.onchange = function () { if (i.files[0]) playFile(i.files[0]); }; i.click();
+  });
+</script>
+</body>
+</html>

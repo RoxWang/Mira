@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mira · 沉浸式本地视频播放器</title>
+<link rel="icon" href="mira-icon.png">
+<style>
+  :root { color-scheme: dark;
+    --bg1:#0b0a1f; --bg2:#150f33; --bg3:#241a4d;
+    --purple:#8b5cf6; --pink:#ff5c8a; --ink:#e9e9f2; --sub:#a9a6c4; }
+  * { box-sizing: border-box; }
+  body { margin:0; color:var(--ink);
+    font:16px/1.7 -apple-system,"PingFang SC",system-ui,sans-serif;
+    background:
+      radial-gradient(120% 90% at 50% 36%, var(--bg3) 0%, var(--bg2) 46%, var(--bg1) 100%) fixed;
+    min-height:100vh; }
+  .wrap { max-width:780px; margin:0 auto; padding:84px 24px 64px; text-align:center; }
+  .logo { width:154px; height:154px; border-radius:32%;
+    box-shadow:0 22px 64px rgba(139,92,246,.45), 0 6px 18px rgba(0,0,0,.5);
+    display:block; margin:0 auto 26px; }
+  .tag { color:var(--sub); font-size:18px; letter-spacing:.4px; margin:0 0 6px; }
+  .desc { color:var(--sub); max-width:560px; margin:18px auto 0; }
+  .desc b { color:#d9d6f2; font-weight:600; }
+  .btns { margin-top:38px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  a.btn { padding:15px 28px; border-radius:14px; font-weight:700; text-decoration:none;
+    font-size:15px; transition:transform .12s ease, filter .12s ease; }
+  a.btn:hover { transform:translateY(-2px); filter:brightness(1.08); }
+  .primary { background:linear-gradient(120deg,var(--purple),var(--pink)); color:#0b0a1f; }
+  .ghost { border:1px solid rgba(255,255,255,.22); color:#eee; }
+  .feat { margin-top:52px; display:grid; grid-template-columns:1fr 1fr; gap:16px; text-align:left; }
+  .feat div { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10);
+    border-radius:16px; padding:18px 20px; }
+  .feat h3 { margin:0 0 6px; font-size:15.5px; color:#efeefe; }
+  .feat p { margin:0; color:var(--sub); font-size:13.5px; line-height:1.6; }
+  footer { margin-top:56px; color:#6f6c8c; font-size:13px; }
+  @media (max-width:560px){ .feat{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="mira-icon.png" alt="Mira">
+  <div class="tag">沉浸式本地视频播放器</div>
+  <p class="desc">
+    Mira 来自拉丁语 <b>mirari</b>（凝视、惊叹）与西班牙语 <b>mirar</b>（看）。
+    打开它，你就只剩画面，世界被关在门外 —— 像整个人沉进电影里。
+    它跑在你自己的浏览器上：不上传、不联网、不窥探，纯本地播放。
+  </p>
+  <div class="btns">
+    <a class="btn primary" href="Mira-1.0.zip">下载 Mira（macOS .app）</a>
+    <a class="btn ghost" href="play.html">在线网页版 →</a>
+  </div>
+  <div class="feat">
+    <div><h3>纯本地</h3><p>视频不离开你的电脑，没有云端、没有账号。</p></div>
+    <div><h3>沉浸</h3><p>极简界面，播放时只剩画面，干扰归零。</p></div>
+    <div><h3>续播</h3><p>记住你看到哪一集哪一秒，下次接着看。</p></div>
+    <div><h3>双字幕</h3><p>主辅两条字幕独立调，跟 B 站一样。</p></div>
+  </div>
+  <footer>由 新一Rox / RoxWang 制作 · Life in transit</footer>
+</div>
+</body>
+</html>
