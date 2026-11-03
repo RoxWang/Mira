@@ -1,52 +1,63 @@
-# Mira — 极简本地视频播放器（浏览器跨平台）
+# Mira — 极简本地视频播放器
 
-> 一个跑在浏览器里的本地视频播放器。用 **Google Chrome 的内核**播放，套一层为「看剧 / 看课 / 碎片时间随手看」设计的界面：继续播放、双字幕、播放列表、触控板手势拖进度。不转码、不联网、不留缓存。
+> **打开就能用，不用下载、不用安装、不用注册：**
+> ### 👉 https://roxwang.github.io/Mira/
 >
-> **网页版全平台通用**：Windows / macOS / iPhone / iPad / Android，打开浏览器就能用，不用装任何东西。另附一个 **macOS 桌面 App**（双击即开，多一个自动扫同目录字幕的增强），Mac 用户想要更顺手可以下。
+> 这是一个**跑在浏览器里的**本地视频播放器。视频文件永远留在你电脑 / 手机的硬盘上，不上传、不联网、不留副本。
+> Windows、macOS、iPhone、iPad、Android —— 只要有浏览器，打开上面那个网址就能看。
 
-Mira is a browser-based local video player that wraps **Google Chrome's engine** as its playback core, with a clean UI built for binge-watching local shows, courses, and quick viewing. Resume, dual subtitles, playlists, trackpad scrubbing — no transcoding, no network, no cache.
-
-Works in any browser on Windows, macOS, iPhone, iPad and Android. A macOS desktop app is also provided for users who want double-click launch and automatic subtitle discovery.
+一句话说清它是什么：**它不是软件，是一个网页。** 你在网页里选自己的视频文件，它负责把片子放好、记住你看到哪儿、把字幕挂上。
 
 ---
 
-## 它适合谁 / Who it's for
-- 在追本地剧集 / 课程视频，想要「关掉再开接着看上一集」
-- 需要双字幕、自定义字幕位置 / 大小 / 颜色
-- 烦了系统播放器的臃肿，想要一个干净轻量的替代品
+## 怎么用（三步）
 
-## 两种用法 / Two ways
-- **网页版（推荐，全平台）**：打开 `docs/play.html`（或部署后的网址），在浏览器里选视频 / 拖视频即可。Windows / macOS / iPhone / iPad / Android 都能用。
-- **macOS 桌面 App**：下载 `Mira-1.0.zip` 解压得到 `Mira.app`，双击启动。额外支持「自动扫同目录字幕」「读取媒体信息」等浏览器做不到的能力。
+1. 浏览器打开 **https://roxwang.github.io/Mira/**（手机也一样，直接输网址或扫码）。
+2. 点「打开视频…」选一个文件，或点「打开文件夹…」选一整部剧，也可以直接把视频/文件夹拖进页面。
+3. 看完关掉就行。下次打开同一个网址，主页会显示「继续播放」，点一下接着上次那一秒。
 
-## 前置要求 / Requirements
-- **网页版**：一个现代浏览器（Chrome / Edge / Safari 均可）。
-- **macOS App**：macOS + 本机已安装 Google Chrome（App 会调用 Chrome 内核播放）。
-- 网页版不做任何本地文件扫描；App 首次选「文件夹」时 macOS 会请求文件访问权限——允许即可（仅用于读取你选的视频）。
+**想分享给别人？** 把这个网址发给他就行：`https://roxwang.github.io/Mira/`
+不用他装任何东西，手机上也能直接开。
 
-## 使用 / Usage
-- **网页版**：打开页面 → 选文件 / 拖入视频。
-- **App**：双击 `Mira.app` → 主页，拖入视频 / 选文件 / 选文件夹；访达里右键视频 → 打开方式 → Mira。
-- 快捷键：空格 播放/暂停 · ←/→ 快退快进（按住 → 加速）· F 全屏 · C 字幕开关 · S 加载字幕 · O 回主页 · ⌘←/⌘→ 上/下一集 · ⌘, 设置
-- 触控板双指横滑 = 拖进度（距离制，慢挪精确定位；⌥ 精细模式）
+## 快捷键
 
-## 特性 / Features
-- **继续播放**：单文件按路径、文件夹按「剧名 + 第几集」记住位置，刷新 / 重开接着看
-- **播放列表**：选整个文件夹或一次选多集，自动按集排序
-- **双字幕**：主 / 辅独立，位置 / 大小 / 颜色 / 延迟可调；同目录字幕自动挂载并长期保存
-- **画面调节**：亮度 / 对比 / 饱和 / 色相 / 旋转 / 缩放 / 比例，零缓存
-- **零联网、零转码、零缓存**：视频原地播放，不做任何副本
+空格 播放/暂停 · ←/→ 快退快进（按住 → 加速）· F 全屏 · C 字幕开关 · S 载入字幕 · O 回主页 · ⌘←/⌘→ 上/下一集 · ⌘, 设置
+（触控板双指横滑 = 拖进度，慢挪精确定位，⌥ 精细模式）
 
-## 原理 / How it works
-Mira 的界面是一张本地 HTML 页面，用浏览器原生 `<video>` 播放；网页版由任何现代浏览器打开，macOS App 则由本机 Chrome 以**独立窗口**打开。好处：解码交给浏览器（H.264 / HEVC / AV1 等格式天然支持），界面可以像网页一样随时改，且完全离线。
+## 特性
 
-The UI is a local HTML page that uses the browser's native `<video>`. The web version runs in any modern browser; the macOS app opens it in your Chrome in its own window. Decoding is delegated to the browser (H.264 / HEVC / AV1 out of the box), the UI is just web tech, and everything stays fully offline.
+- **继续播放**：按「剧名 + 第几集」记住位置，关掉再开接着看
+- **播放列表**：选整个文件夹或一次选多集，自动按集数排序
+- **双字幕**：主 / 辅独立，位置 / 大小 / 颜色 / 延迟都能调，同目录字幕自动挂上
+- **画面调节**：亮度 / 对比 / 饱和 / 色相 / 旋转 / 缩放 / 比例
+- **零联网、零转码、零缓存**：视频原地播放，不生成任何副本
 
-## 常见问题 / FAQ
-- **打不开 / 双击没反应？**（App）确认装了 Chrome；若仍不行，关掉 Chrome（⌘Q）再双击一次。
-- **字幕不显示？** 默认自动挂载同目录字幕；手动按 S 选择 `.srt` / `.vtt`。
-- **为什么不能播 Netflix / 爱奇艺？** 那些是 DRM 加密流，浏览器套壳也解不开（非工具弱，是源被锁死）。
-- **手机上能看本地视频吗？** 能。用手机浏览器打开网页版，选「文件」里存的视频即可播放（受手机浏览器支持的格式限制）。
+## 关于下载（先说清楚，别下错）
 
-## 许可证 / License
-MIT
+**绝大多数人不需要下载任何东西。** 上面那个网址在 Windows / Mac / 手机 / 平台全都能用。
+
+[Releases](https://github.com/RoxWang/Mira/releases) 里那个 `Mira-1.0.zip` 是**给 macOS 用户的可选小工具**：
+
+- 它**不是播放器**，只是一个「双击启动器」。解压出 `Mira.app`，双击它 = 让本机 Chrome 用独立窗口打开同一个网页，并把你要看的视频路径直接塞进去。
+- 它里面装的就是同一份播放器页面，所以网页更新了，玩法完全一样。
+- 它**只能在 macOS 上运行**，需要本机装了 Google Chrome。**Windows 上不要下这个**，Windows 用户开网页就行。
+
+**Windows 想有个「桌面图标」怎么办？** 现在没有 Windows 版安装包。可行的办法：在 Chrome / Edge 里打开网址 → 菜单 →「应用 / 安装此站点为应用」→ 桌面上就有独立窗口的快捷方式，效果和 App 一样，还不用装东西。
+
+## 原理
+
+界面是一张 HTML 页面，播放交给浏览器原生的 `<video>`。解码器是浏览器自带的（H.264 / HEVC / AV1 等），所以不需要转码；页面本身不请求任何服务器，视频也只从你本地读取。
+
+## FAQ
+
+- **Windows 能用吗？** 能，用浏览器打开那个网址就是完整功能，不需要安装任何东西。
+- **手机上能看本地视频吗？** 能。手机浏览器打开网址 → 选「文件」里的视频（受手机浏览器支持的格式限制）。
+- **为什么不能播 Netflix / 爱奇艺？** 那些是 DRM 加密流，任何浏览器套壳都解不开（源被锁死，不是工具的问题）。
+- **字幕不显示？** 默认会自动挂同目录同名字幕；也可以按 S 手动选 `.srt` / `.vtt`。
+- **网页版能记住我看哪儿吗？** 能。记录存在你自己浏览器的本地存储里（不上传）。但「单个视频文件」的记录刷新后就失效——浏览器不允许网页在刷新后重新打开你硬盘上的某个文件，这是安全限制；用「打开文件夹」选整部剧，记录就能稳定跨刷新。
+
+---
+
+**Mira** is a browser-based local video player: open https://roxwang.github.io/Mira/ in any browser on Windows, macOS, iOS or Android, pick a local video or drop a folder, and it plays — no upload, no network, no cache. The optional `Mira.app` in Releases is a macOS-only double-click launcher for the very same web page; Windows users don't need it.
+
+License: MIT
