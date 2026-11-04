@@ -790,22 +790,6 @@
 
         <div class="hd">Appearance</div>
         <div class="row"><span class="lb">Opacity<span class="hint">Every panel and hint uses this · Apple Liquid Glass</span></span><input class="sl" type="range" min="0" max="100" step="1" data-k="opacity"><b class="vl" data-v="opacity"></b></div>
-
-        <!-- 只在下载的 app 里出现：网页版你用什么浏览器打开就是什么，没有这个设置。
-             默认跟随系统默认浏览器；想换，下拉挑一个 → Apply，通过 mira:// 协议交给
-             Mira.app 写进配置文件落地。网页本身写不了磁盘（浏览器沙箱），只能用这种
-             「协议交给原生 app」的方式绕过去，这是硬限制。 -->
-        <div id="brSec" style="display:none">
-          <div class="hd" id="brHd">Browser</div>
-          <div class="row">
-            <span class="lb" id="brLb">Open videos with</span>
-            <span class="grp">
-              <select class="sel" id="brSel"></select>
-              <button class="btn" id="brSave">Apply</button>
-            </span>
-          </div>
-          <div class="row"><span class="hint" id="brHint"></span></div>
-        </div>
       </div>
 
       <!-- ══ Subtitles ══ -->
@@ -908,6 +892,21 @@
 
         <div class="hd">Reset</div>
         <button class="btn warn" id="resetAll">Restore Defaults</button>
+
+        <!-- 浏览器：默认跟随系统默认；想固定用某个，下拉挑一个 → Apply。
+             在 Mira.app 里点 Apply 会通过 mira:// 协议把选择写进配置文件（网页沙箱写不了磁盘，硬限制）；
+             纯网页/预览里点 Apply 只提示、不会报错，因为那边没有原生 app 来落地。 -->
+        <div id="brSec">
+          <div class="hd" id="brHd">Browser</div>
+          <div class="row">
+            <span class="lb" id="brLb">Open videos with</span>
+            <span class="grp">
+              <select class="sel" id="brSel"></select>
+              <button class="btn" id="brSave">Apply</button>
+            </span>
+          </div>
+          <div class="row"><span class="hint" id="brHint"></span></div>
+        </div>
       </div>
 
     </div>
@@ -1242,20 +1241,14 @@ function applyLang() {
   paintBrowser();
 }
 
-/* ── 「用哪个浏览器打开」——只有下载的那个 app（file://）才需要这一行 ──
-   网页版 / 预览版：你用什么浏览器打开就是什么，没有这个设置，整块藏起来。
-   在 app 里，这一行是真能选的：下拉挑一个 → 点 Apply → 页面通过 mira:// 协议
-   把选择交给 Mira.app 写进 ~/Library/Application Support/Mira/browser。
-   网页本身在浏览器沙箱里写不了磁盘，这是绕不过的硬限制，只能靠原生 app 落地。
-   改完下一次「打开视频」就生效（app 每次开视频都重新读这个文件）。 */
+/* ── 「用哪个浏览器打开」—— 这是设置里的一个普通选项，所有平台都显示 ──
+   在 Mira.app（file://）里，点 Apply 会通过 mira:// 协议把选择写进配置文件（网页沙箱写不了磁盘，硬限制）；
+   纯网页 / 预览里点 Apply 只提示、不会报错，因为那边没有原生 app 来落地。
+   默认跟随系统默认浏览器；改完在 app 里下一次「打开视频」就生效。 */
 function paintBrowser() {
   if (!brSec) return;
-  /* 只在「本地」展示：下载的 app（file://）和本地预览（127.0.0.1）都能看到；
-     对外公开的生产网址（github.io）隐藏——那里你本身就在浏览器里，没有「用哪个浏览器打开」的概念。 */
-  var local = location.protocol === 'file:'
-           || location.hostname === '127.0.0.1'
-           || location.hostname === 'localhost';
-  if (!local) { brSec.style.display = 'none'; return; }
+  /* 所有平台都显示：它就是设置里的一个选项，不该藏起来。 */
+  var inApp = location.protocol === 'file:';
   brSec.style.display = '';
 
   /* 下拉项：第一项空值 = 跟随系统默认；其余是常见浏览器 */
@@ -1263,10 +1256,10 @@ function paintBrowser() {
     ['',                    'System default',          '系统默认'],
     ['com.google.chrome',        'Google Chrome',        'Google Chrome'],
     ['com.microsoft.edgemac',    'Microsoft Edge',       'Microsoft Edge'],
+    ['com.apple.Safari',         'Safari',               'Safari'],
+    ['org.mozilla.firefox',      'Firefox',              'Firefox'],
     ['com.brave.browser',        'Brave',                'Brave'],
     ['com.vivaldi.vivaldi',      'Vivaldi',              'Vivaldi'],
-    ['org.mozilla.firefox',      'Firefox',              'Firefox'],
-    ['com.apple.Safari',         'Safari',               'Safari'],
     ['com.operasoftware.opera',  'Opera',                'Opera'],
     ['company.thebrowser.browser','Arc',                 'Arc'],
     ['org.chromium.chromium',    'Chromium',             'Chromium']
@@ -1293,14 +1286,34 @@ function paintBrowser() {
 
   if (brHd)   brHd.textContent   = t2('Browser', '浏览器');
   if (brLb)   brLb.textContent   = t2('Open videos with', '用哪个浏览器打开视频');
-  if (brHint) brHint.textContent = t2('Applies next time you open a video', '下次打开视频时生效');
+  if (brHint) brHint.textContent = inApp
+    ? t2('Used when Mira.app opens a video; choices made on the web sync here too',
+         '用于 Mira.app 双击打开视频；网页端的选择也会同步到这里。')
+    : t2('Only affects Mira.app: choosing here or in the app only changes which browser Mira.app uses to open videos',
+         '仅对 Mira.app 生效：在这里选、或在 App 里选，都只影响 Mira.app 打开视频时用的浏览器。');
 
-  /* 一次性绑定 Apply：构造 mira:// 链接并点它，交给系统叫起 Mira.app 落地 */
+  /* 一次性绑定 Apply */
   if (!brSave.__bound) {
     brSave.__bound = true;
     brSave.addEventListener('click', function () {
       var id = brSel.value;
       try { localStorage.setItem('mira.browser', id); } catch (e) {}
+      if (!inApp) {
+        /* 网页 / 预览：选了之后通过 mira:// 同步给 Mira.app（仅 macOS 装了 app 才接得住；
+           其他系统没有 app，就只存本地预览用）。这样在网页或 App 里选，最终都落到 App 的配置。 */
+        var isMac = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
+        if (isMac) {
+          var u = 'mira://setbrowser' + (id ? '?id=' + encodeURIComponent(id) : '');
+          var a = document.createElement('a'); a.href = u; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          brHint.textContent = t2('Saved & synced to Mira.app — applies when you open a video there',
+                                  '已保存并同步到 Mira.app — 在 App 里打开视频时生效。');
+        } else {
+          brHint.textContent = t2('Saved locally — only Mira.app (macOS) can actually apply it',
+                                  '已存本地 — 只有 macOS 的 Mira.app 能真正应用。');
+        }
+        return;
+      }
+      /* 在 app 里：构造 mira:// 链接并点它，交给系统叫起 Mira.app 落地 */
       var url = 'mira://setbrowser' + (id ? '?id=' + encodeURIComponent(id) : '');
       var a = document.createElement('a');
       a.href = url;
