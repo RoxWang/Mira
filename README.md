@@ -26,7 +26,7 @@
 ## Mac 端已实测（真机跑通）
 
 在 App 或网页 Mac 端里选默认浏览器 → 下次双击开视频就真用那个浏览器（Chrome / Safari / 恢复默认都验证过）。
-下拉顺序固定为：**系统默认 → ① 谷歌 → ② Edge → ③ Safari → ④ 火狐 → 其余**。
+下拉顺序固定为：**系统默认 → ① Google Chrome → ② Microsoft Edge → ③ Safari → ④ Firefox → 其余**。
 注意：网页端的选择**只对 macOS 的 Mira.app 生效**；非 Mac 设备只存本地，不会真改系统打开方式。
 
 ---
