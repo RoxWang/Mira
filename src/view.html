@@ -791,11 +791,20 @@
         <div class="hd">Appearance</div>
         <div class="row"><span class="lb">Opacity<span class="hint">Every panel and hint uses this · Apple Liquid Glass</span></span><input class="sl" type="range" min="0" max="100" step="1" data-k="opacity"><b class="vl" data-v="opacity"></b></div>
 
-        <!-- 只在下载的 app 里才出现：网页版你用什么浏览器打开就是什么，没有这个设置可言。
-             默认跟着系统默认浏览器走，不弹任何窗；想换就去系统设置改那一个地方。 -->
+        <!-- 只在下载的 app 里出现：网页版你用什么浏览器打开就是什么，没有这个设置。
+             默认跟随系统默认浏览器；想换，下拉挑一个 → Apply，通过 mira:// 协议交给
+             Mira.app 写进配置文件落地。网页本身写不了磁盘（浏览器沙箱），只能用这种
+             「协议交给原生 app」的方式绕过去，这是硬限制。 -->
         <div id="brSec" style="display:none">
           <div class="hd" id="brHd">Browser</div>
-          <div class="row"><span class="lb"><span id="brLb">—</span><span class="hint" id="brHint"></span></span></div>
+          <div class="row">
+            <span class="lb" id="brLb">Open videos with</span>
+            <span class="grp">
+              <select class="sel" id="brSel"></select>
+              <button class="btn" id="brSave">Apply</button>
+            </span>
+          </div>
+          <div class="row"><span class="hint" id="brHint"></span></div>
         </div>
       </div>
 
@@ -1021,6 +1030,8 @@ var brSec  = document.getElementById('brSec');
 var brHd   = document.getElementById('brHd');
 var brLb   = document.getElementById('brLb');
 var brHint = document.getElementById('brHint');
+var brSel  = document.getElementById('brSel');
+var brSave = document.getElementById('brSave');
 
 var LIST = [], curIdx = -1, curSrc = '', curKey = '', folderMode = false, curFolderName = '';
 var BLOCKED = 0;   /* 1 = 系统不让我们列这个目录 */
@@ -1231,13 +1242,12 @@ function applyLang() {
   paintBrowser();
 }
 
-/* ── 「用哪个浏览器打开」——只有下载的那个 app 才需要这一行 ──
-   网页版：你用什么浏览器打开就是什么，压根没有这个设置，所以整块藏起来。
-   app 里：这页就是被某个浏览器加载的，navigator.userAgent 就是现成答案，不用问谁。
-   为什么不在这里放「切换浏览器」的按钮：
-   网页改不了 app 的启动参数，硬放一个按钮只会做出个点了没反应的假开关（比没有更糟）。
-   换浏览器只有一条正规路径 —— 系统设置 → 桌面与程序坞 → 默认网页浏览器。
-   app 每次启动都会重新读系统默认，所以那边一改，下次双击视频就换了。 */
+/* ── 「用哪个浏览器打开」——只有下载的那个 app（file://）才需要这一行 ──
+   网页版 / 预览版：你用什么浏览器打开就是什么，没有这个设置，整块藏起来。
+   在 app 里，这一行是真能选的：下拉挑一个 → 点 Apply → 页面通过 mira:// 协议
+   把选择交给 Mira.app 写进 ~/Library/Application Support/Mira/browser。
+   网页本身在浏览器沙箱里写不了磁盘，这是绕不过的硬限制，只能靠原生 app 落地。
+   改完下一次「打开视频」就生效（app 每次开视频都重新读这个文件）。 */
 function paintBrowser() {
   if (!brSec) return;
   /* 只在「本地」展示：下载的 app（file://）和本地预览（127.0.0.1）都能看到；
@@ -1247,18 +1257,61 @@ function paintBrowser() {
            || location.hostname === 'localhost';
   if (!local) { brSec.style.display = 'none'; return; }
   brSec.style.display = '';
-  var ua = navigator.userAgent, name = '—';
-  if (/Edg\//.test(ua)) name = 'Microsoft Edge';
-  else if (/OPR\//.test(ua)) name = 'Opera';
-  else if (/Vivaldi/.test(ua)) name = 'Vivaldi';
-  else if (/Brave/.test(ua)) name = 'Brave';
-  else if (/Firefox\//.test(ua)) name = 'Firefox';
-  else if (/Chrome\//.test(ua)) name = 'Google Chrome';
-  else if (/Safari\//.test(ua)) name = 'Safari';
-  if (brHd) brHd.textContent = t2('Browser', '浏览器');
-  if (brLb) brLb.textContent = t2('Opening in ' + name, '用 ' + name + ' 打开');
-  if (brHint) brHint.textContent = t2('To change it: System Settings → Desktop & Dock → Default web browser',
-                                      '想换：系统设置 → 桌面与程序坞 → 默认网页浏览器');
+
+  /* 下拉项：第一项空值 = 跟随系统默认；其余是常见浏览器 */
+  var opts = [
+    ['',                    'System default',          '系统默认'],
+    ['com.google.chrome',        'Google Chrome',        'Google Chrome'],
+    ['com.microsoft.edgemac',    'Microsoft Edge',       'Microsoft Edge'],
+    ['com.brave.browser',        'Brave',                'Brave'],
+    ['com.vivaldi.vivaldi',      'Vivaldi',              'Vivaldi'],
+    ['org.mozilla.firefox',      'Firefox',              'Firefox'],
+    ['com.apple.Safari',         'Safari',               'Safari'],
+    ['com.operasoftware.opera',  'Opera',                'Opera'],
+    ['company.thebrowser.browser','Arc',                 'Arc'],
+    ['org.chromium.chromium',    'Chromium',             'Chromium']
+  ];
+  var zh = SET.lang === 1;
+  if (brSel.options.length !== opts.length) {
+    brSel.innerHTML = '';
+    for (var i = 0; i < opts.length; i++) {
+      var o = document.createElement('option');
+      o.value = opts[i][0];
+      o.textContent = zh ? opts[i][2] : opts[i][1];
+      brSel.appendChild(o);
+    }
+  } else {
+    for (var j = 0; j < opts.length; j++) {
+      brSel.options[j].textContent = zh ? opts[j][2] : opts[j][1];
+    }
+  }
+
+  /* 当前选中：读不到磁盘上的配置文件，只能用上次 Apply 时记下的 localStorage 反映 */
+  var cur = '';
+  try { cur = localStorage.getItem('mira.browser') || ''; } catch (e) {}
+  brSel.value = cur;
+
+  if (brHd)   brHd.textContent   = t2('Browser', '浏览器');
+  if (brLb)   brLb.textContent   = t2('Open videos with', '用哪个浏览器打开视频');
+  if (brHint) brHint.textContent = t2('Applies next time you open a video', '下次打开视频时生效');
+
+  /* 一次性绑定 Apply：构造 mira:// 链接并点它，交给系统叫起 Mira.app 落地 */
+  if (!brSave.__bound) {
+    brSave.__bound = true;
+    brSave.addEventListener('click', function () {
+      var id = brSel.value;
+      try { localStorage.setItem('mira.browser', id); } catch (e) {}
+      var url = 'mira://setbrowser' + (id ? '?id=' + encodeURIComponent(id) : '');
+      var a = document.createElement('a');
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      brHint.textContent = id
+        ? t2('Saved — opens with your choice next time', '已保存 — 下次打开视频用所选浏览器')
+        : t2('Saved — follows system default', '已保存 — 跟随系统默认');
+    });
+  }
 }
 
 
