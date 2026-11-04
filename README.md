@@ -21,6 +21,10 @@
 
 ## 怎么弄（每一步）
 
+> **去 Releases 后只下这两个，别的（Source code 那两个）是源码、普通人不用管：**
+> - `Mira-1.0.zip` = Mac App（Mac 用户下这个）
+> - `Mira-standalone.html` = 离线单文件播放器（Windows / Linux / 想断网的下这个）
+
 1. **网页版**：直接打开最上面的链接，完事。
 2. **浏览器「安装为应用」**：打开链接 → 浏览器右上角菜单（Chrome / Edge 点 `⋮`）→「安装此站点为应用 / Install」→ 桌面出现图标。
 3. **Mac App**：① 点 [Releases](https://github.com/RoxWang/Mira/releases) → ② 点 `Mira-1.0.zip` 下载 → ③ 双击解压得到 `Mira.app` → ④ 拖进「应用程序」文件夹。
