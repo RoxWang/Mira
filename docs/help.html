@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mira · 怎么用</title>
 <style>
-  :root{ --bg:#0f1115; --card:#1a1d24; --fg:#e9edf2; --mut:#9aa3b2; --acc:#4f9dff; --grn:#37c871; }
+  :root{ --bg:#0f1115; --fg:#e9edf2; --mut:#9aa3b2; --acc:#4f9dff; --grn:#37c871; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:28px 18px 50px}
-  .wrap{max-width:720px;margin:0 auto}
+  .wrap{max-width:760px;margin:0 auto}
   h1{font-size:24px;margin:0 0 4px}
   .sub{color:var(--mut);margin:0 0 20px}
   .cta{display:block;text-align:center;text-decoration:none;background:linear-gradient(135deg,var(--acc),#2f7be0);color:#fff;font-size:20px;font-weight:700;padding:20px;border-radius:14px;box-shadow:0 8px 24px rgba(79,157,255,.35)}
   .cta small{display:block;font-weight:400;font-size:13px;opacity:.92;margin-top:6px}
   .cta:hover{filter:brightness(1.06)}
   h2{font-size:16px;margin:26px 0 8px;border-left:3px solid var(--acc);padding-left:10px}
-  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13.5px}
   th,td{border:1px solid #262b34;padding:9px 10px;text-align:left;vertical-align:top}
   th{background:#161a21;color:#fff}
   td b{color:#fff}
@@ -24,6 +24,8 @@
   a.lk{color:var(--acc);text-decoration:none}
   a.lk:hover{text-decoration:underline}
   code{background:#161a21;padding:1px 5px;border-radius:4px;font-size:13px}
+  ol{margin:8px 0;padding-left:20px}
+  ol li{margin:7px 0}
 </style>
 </head>
 <body>
@@ -39,13 +41,28 @@
   <h2>怎么用（一句话）</h2>
   <p>打开上面的链接 → 点「打开视频」选文件（或拖进页面）→ 看完关掉，下次自动接着播。手机、电脑、平板都一样。</p>
 
-  <h2>选哪个版本（挑一个就够了）</h2>
+  <h2>四种方式，挑最适合你的</h2>
   <table>
-    <tr><th>你的情况</th><th>用这个</th><th>怎么弄</th></tr>
-    <tr><td><b>大多数人</b></td><td><b>网页版</b></td><td>直接打开链接，永远最新，无需任何操作</td></tr>
-    <tr><td>想要桌面图标、不占空间</td><td>浏览器「安装为应用」</td><td>打开链接 → 浏览器菜单 → 安装此站点为应用（和网页同一套，无下载）</td></tr>
-    <tr><td><b>Mac 用户</b>，要双击直开 / 整季自动连 / 断网</td><td><b>Mira.app</b>（仅 macOS）</td><td>① 点 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> → ② 点 <code>Mira-1.0.zip</code> 下载 → ③ 双击解压得到 <code>Mira.app</code> → ④ 拖进「应用程序」文件夹</td></tr>
+    <tr><th>方式</th><th>适合谁</th><th>核心点（✓ 优点 / ✗ 注意）</th></tr>
+    <tr><td><b>网页版</b></td><td>所有人，首选</td><td>✓ 打开就用、不用装、永远最新、全平台<br>✗ 首次要联网（之后浏览器会缓存，可离线）</td></tr>
+    <tr><td>浏览器「安装为应用」</td><td>想有桌面图标、不占空间</td><td>✓ 和网页同一套，变成独立窗口<br>✗ 本质还是网页，要联网，不能双击视频文件直接开</td></tr>
+    <tr><td><b>Mac App</b>（仅 macOS）</td><td>Mac 用户，要双击直开 / 整季自动连 / 断网</td><td>✓ 双击视频就播、整季自动连、可设默认播放器、能离线<br>✗ 仅 macOS</td></tr>
+    <tr><td><b>独立 HTML</b>（全平台）</td><td>Windows / Linux 想<b>断网</b>用、或想随身带一个文件</td><td>✓ 就一个文件、<b>断网也能用</b>、跨平台<br>✗ 要手动下载、手动选文件、更新需重新下</td></tr>
   </table>
+
+  <h2>怎么弄（每一步）</h2>
+  <ol>
+    <li><b>网页版</b>：直接打开最上面的链接，完事。</li>
+    <li><b>浏览器「安装为应用」</b>：打开链接 → 浏览器右上角菜单（Chrome / Edge 点 <code>⋮</code>）→「安装此站点为应用 / Install」→ 桌面出现图标。</li>
+    <li><b>Mac App</b>：① 点 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> → ② 点 <code>Mira-1.0.zip</code> 下载 → ③ 双击解压得到 <code>Mira.app</code> → ④ 拖进「应用程序」文件夹。</li>
+    <li><b>独立 HTML（断网 / 随身版）</b>：
+      <ul>
+        <li><b>怎么拿到</b>：去 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> 下载 <code>Mira-standalone.html</code>，<b>不用你自己造</b>。</li>
+        <li><b>它到底是什么</b>：就是播放器网页本身存成的一个单文件——开发者把那张网页直接另存发布，没有额外打包。所以双击它 = 用浏览器打开播放器。</li>
+        <li><b>怎么用</b>：下载后双击（会用你默认浏览器打开）→ 点页面上「打开视频」选文件就能看，<b>断网也行</b>。</li>
+      </ul>
+    </li>
+  </ol>
 
   <h2>Mac 端已实测（真机跑通）</h2>
   <p class="ok">✓ 在 App 或网页 Mac 端选默认浏览器 → 下次双击开视频就真用那个浏览器（Chrome / Safari / 恢复默认都验证过）。</p>
