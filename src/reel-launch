@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Mira 的实际干活部分：把视频交给 Chrome 播
+# Mira 的实际干活部分：把视频交给浏览器播
+# （默认用你系统的默认浏览器；想固定用某个见下面「用哪个浏览器打开」那段）
 #
 # 调用者：同目录的 AppleScript app（main.scpt）
 #   - 访达右键「打开方式 → Mira」传文件进来 → on open
@@ -41,21 +42,77 @@ GEN="$APP_DIR/Resources/castgen.pl"
 
 [[ -f "$PAGE" ]] || { echo "Mira 坏了：找不到 $PAGE"; exit 1; }
 
-# ── 找 Chrome 二进制（优先系统目录，其次用户目录）──
-CHROME=""
-for p in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-         "$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"; do
-  [[ -x "$p" ]] && { CHROME="$p"; break; }
-done
-[[ -n "$CHROME" ]] || { echo "没装 Google Chrome，Mira 没法播"; exit 1; }
+# ── 用哪个浏览器打开：默认跟着你系统的「默认网页浏览器」，不弹窗 ──
+# 想固定用某一个，把 bundle id 写进下面这个文件的第一行（没有这个文件就是跟随系统）：
+#   ~/Library/Application Support/Mira/browser
+# 例如：com.google.Chrome 或 com.apple.Safari
+# 为什么不做「启动时弹窗让你选」：绝大多数人不需要选，弹窗只会挡路。
+# 想换浏览器本来就有一个正式的地方 —— 系统设置 → 桌面与程序坞 → 默认网页浏览器。
+MIRA_PREF="$HOME/Library/Application Support/Mira/browser"
 
-# ── 把 URL 交给 Chrome：二进制 --new-window 保证「一定开新窗口并加载」，
-#    再用 open -a 提到最前（不传 URL，避免重复窗口）──
-open_url() {
-  local url="$1"
-  "$CHROME" --new-window "$url" >/dev/null 2>&1 &
-  /usr/bin/open -a "Google Chrome" >/dev/null 2>&1
+# 从 LaunchServices 里读系统默认浏览器。
+# 优先看 macOS 12+ 那个专门的记录（系统设置里改默认浏览器写的就是它），
+# 读不到再退回到 https 这个 URL scheme 的处理者。两处都是读不到就返回空，交给上层兜底。
+default_browser_id() {
+  local raw
+  raw=$(/usr/bin/defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers 2>/dev/null) || return 1
+  print -r -- "$raw" | /usr/bin/perl -0777 -ne '
+    my @b = split /\},\s*/, $_;
+    for my $x (@b) {
+      next unless $x =~ /default-app\.web-browser/;
+      for my $i ($x =~ /LSHandlerRoleAll\s*=\s*"([^"]+)"/g) { next if $i eq "-"; print "$i\n"; exit }
+    }
+    for my $x (@b) {
+      next unless $x =~ /LSHandlerURLScheme\s*=\s*https?;/;
+      for my $i ($x =~ /LSHandlerRoleAll\s*=\s*"([^"]+)"/g) { next if $i eq "-"; print "$i\n"; exit }
+    }
+  '
 }
+
+# Chromium 系能直接「二进制 + --new-window」把 URL 递进去（比 open 稳，原因见文件头）。
+# Safari / Firefox 不认这套参数，只能交给 LaunchServices，所以分开走。
+chromium_bin() {
+  local app=""
+  case "${1:l}" in
+    com.google.chrome)          app="Google Chrome.app/Contents/MacOS/Google Chrome" ;;
+    com.microsoft.edgemac)      app="Microsoft Edge.app/Contents/MacOS/Microsoft Edge" ;;
+    com.brave.browser)          app="Brave Browser.app/Contents/MacOS/Brave Browser" ;;
+    com.vivaldi.vivaldi)        app="Vivaldi.app/Contents/MacOS/Vivaldi" ;;
+    org.chromium.chromium)      app="Chromium.app/Contents/MacOS/Chromium" ;;
+    company.thebrowser.browser) app="Arc.app/Contents/MacOS/Arc" ;;
+    com.operasoftware.opera)    app="Opera.app/Contents/MacOS/Opera" ;;
+    *) return 1 ;;
+  esac
+  local d
+  for d in /Applications "$HOME/Applications"; do
+    [[ -x "$d/$app" ]] && { print -r -- "$d/$app"; return 0 }
+  done
+  return 1
+}
+
+BROWSER_ID=""
+if [[ -f "$MIRA_PREF" ]]; then
+  BROWSER_ID=$(/usr/bin/head -1 "$MIRA_PREF" 2>/dev/null | /usr/bin/tr -d '[:space:]')
+fi
+[[ -n "$BROWSER_ID" ]] || BROWSER_ID=$(default_browser_id)
+[[ -n "$BROWSER_ID" ]] || BROWSER_ID="com.google.Chrome"   # 实在读不到（全新系统）才兜这个底
+
+# ── 把 URL 交给浏览器 ──
+# Chromium 系：二进制 --new-window 保证「一定开新窗口并加载」，再用 open -b 提到最前；
+# 其它浏览器：open -b 交给 LaunchServices；连 -b 都不认就退回系统默认（open 不带 -a）。
+open_url() {
+  local url="$1" bin
+  if bin=$(chromium_bin "$BROWSER_ID"); then
+    [[ "${MIRA_DRY:-0}" == "1" ]] && { print "DRY: \"$bin\" --new-window \"$url\""; return; }
+    "$bin" --new-window "$url" >/dev/null 2>&1 &
+    /usr/bin/open -b "$BROWSER_ID" >/dev/null 2>&1
+    return
+  fi
+  [[ "${MIRA_DRY:-0}" == "1" ]] && { print "DRY: open -b \"$BROWSER_ID\" \"$url\""; return; }
+  /usr/bin/open -b "$BROWSER_ID" "$url" >/dev/null 2>&1 || /usr/bin/open "$url" >/dev/null 2>&1
+}
+
+[[ "${MIRA_DRY:-0}" == "1" ]] && print "DRY: BROWSER_ID=$BROWSER_ID"
 
 # ── 双击图标（没传文件）→ 开主页 ──
 if [[ $# -eq 0 || -z "${1:-}" ]]; then
