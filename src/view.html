@@ -1256,10 +1256,10 @@ function paintBrowser() {
     ['',                    'System default',          '系统默认'],
     ['com.google.chrome',        'Google Chrome',        'Google Chrome'],
     ['com.microsoft.edgemac',    'Microsoft Edge',       'Microsoft Edge'],
+    ['com.apple.Safari',         'Safari',               'Safari'],
+    ['org.mozilla.firefox',      'Firefox',              'Firefox'],
     ['com.brave.browser',        'Brave',                'Brave'],
     ['com.vivaldi.vivaldi',      'Vivaldi',              'Vivaldi'],
-    ['org.mozilla.firefox',      'Firefox',              'Firefox'],
-    ['com.apple.Safari',         'Safari',               'Safari'],
     ['com.operasoftware.opera',  'Opera',                'Opera'],
     ['company.thebrowser.browser','Arc',                 'Arc'],
     ['org.chromium.chromium',    'Chromium',             'Chromium']
@@ -1287,8 +1287,10 @@ function paintBrowser() {
   if (brHd)   brHd.textContent   = t2('Browser', '浏览器');
   if (brLb)   brLb.textContent   = t2('Open videos with', '用哪个浏览器打开视频');
   if (brHint) brHint.textContent = inApp
-    ? t2('Applies next time you open a video', '下次打开视频时生效')
-    : t2('Only takes effect inside Mira.app (web preview cannot change it)', '仅 Mira.app 内生效（网页预览改不了）');
+    ? t2('Used when Mira.app opens a video; choices made on the web sync here too',
+         '用于 Mira.app 双击打开视频；网页端的选择也会同步到这里。')
+    : t2('Only affects Mira.app: choosing here or in the app only changes which browser Mira.app uses to open videos',
+         '仅对 Mira.app 生效：在这里选、或在 App 里选，都只影响 Mira.app 打开视频时用的浏览器。');
 
   /* 一次性绑定 Apply */
   if (!brSave.__bound) {
@@ -1297,9 +1299,18 @@ function paintBrowser() {
       var id = brSel.value;
       try { localStorage.setItem('mira.browser', id); } catch (e) {}
       if (!inApp) {
-        /* 纯网页 / 预览：没有原生 app 来落地，只提示，不触发 mira://（否则浏览器会报打不开） */
-        brHint.textContent = t2('Saved locally for preview — actually takes effect after you install Mira.app',
-                                '已暂存预览 — 装了 Mira.app 后才真正生效');
+        /* 网页 / 预览：选了之后通过 mira:// 同步给 Mira.app（仅 macOS 装了 app 才接得住；
+           其他系统没有 app，就只存本地预览用）。这样在网页或 App 里选，最终都落到 App 的配置。 */
+        var isMac = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
+        if (isMac) {
+          var u = 'mira://setbrowser' + (id ? '?id=' + encodeURIComponent(id) : '');
+          var a = document.createElement('a'); a.href = u; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          brHint.textContent = t2('Saved & synced to Mira.app — applies when you open a video there',
+                                  '已保存并同步到 Mira.app — 在 App 里打开视频时生效。');
+        } else {
+          brHint.textContent = t2('Saved locally — only Mira.app (macOS) can actually apply it',
+                                  '已存本地 — 只有 macOS 的 Mira.app 能真正应用。');
+        }
         return;
       }
       /* 在 app 里：构造 mira:// 链接并点它，交给系统叫起 Mira.app 落地 */
