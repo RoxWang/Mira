@@ -45,9 +45,11 @@
     <tr><th>方式</th><th>适合谁</th><th>核心点（✓ 优点 / ✗ 注意）</th></tr>
     <tr><td><b>网页版</b></td><td>所有人，首选</td><td>✓ 打开就用、不用装、永远最新、全平台<br>✗ 首次要联网（之后浏览器会缓存，可离线）</td></tr>
     <tr><td>浏览器「安装为应用」</td><td>想有桌面图标、不占空间</td><td>✓ 和网页同一套，变成独立窗口<br>✗ 本质还是网页，要联网，不能双击视频文件直接开</td></tr>
-    <tr><td><b>Mac App</b>（仅 macOS）</td><td>Mac 用户，要双击直开 / 整季自动连 / 断网</td><td>✓ 双击视频就播、整季自动连、可设默认播放器、能离线<br>✗ 仅 macOS</td></tr>
+    <tr><td><b>Mac App</b>（仅 macOS）</td><td>Mac 用户，要双击直开 / 整季自动连 / 断网</td><td>✓ 双击视频就播、整季自动连、可设默认播放器、能离线<br>✗ 仅 macOS；首次打开会被 macOS 拦一下，点「仍要打开」即可</td></tr>
     <tr><td><b>独立 HTML</b>（全平台）</td><td>Windows / Linux 想<b>断网</b>用、或想随身带一个文件</td><td>✓ 就一个文件、<b>断网也能用</b>、跨平台<br>✗ 要手动下载、手动选文件、更新需重新下</td></tr>
   </table>
+
+  <p class="note">⚠️ 四种里只有 <b>Mac App</b> 首次打开会被 macOS 弹窗拦一下（没上架 App Store），其余三种不会弹窗。</p>
 
   <h2>怎么弄（每一步）</h2>
   <p class="note">去 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> 后只下这两个，别的（Source code 那两个）是源码、普通人不用管：<br>
@@ -55,7 +57,7 @@
   <ol>
     <li><b>网页版</b>：直接打开最上面的链接，完事。</li>
     <li><b>浏览器「安装为应用」</b>：打开链接 → 浏览器右上角菜单（Chrome / Edge 点 <code>⋮</code>）→「安装此站点为应用 / Install」→ 桌面出现图标。</li>
-    <li><b>Mac App</b>：① 点 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> → ② 点 <code>Mira-1.0.zip</code> 下载 → ③ 双击解压得到 <code>Mira.app</code> → ④ 拖进「应用程序」文件夹。</li>
+    <li><b>Mac App</b>：① 点 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> → ② 点 <code>Mira-1.0.zip</code> 下载 → ③ 双击解压得到 <code>Mira.app</code> → ④ 拖进「应用程序」文件夹（首次打开若被 macOS 拦，去「系统设置 → 隐私与安全性」点「仍要打开」）。</li>
     <li><b>独立 HTML（断网 / 随身版）</b>：去 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> 下载 <code>Mira-standalone.html</code> → 双击（用默认浏览器打开）→ 点「打开视频」选文件就能看，断网也行。</li>
   </ol>
 
