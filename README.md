@@ -70,6 +70,8 @@
 - 它**只能在 macOS 上运行**。用哪个浏览器打开，**默认跟你系统的默认浏览器走**（Chrome / Edge / Brave / Vivaldi / Firefox / Safari / Opera / Arc 都行），不弹任何窗。
 - **想固定在某个浏览器**：打开 app → 设置 → 浏览器，下拉挑一个 → Apply，下次双击视频就生效，**不用去动系统设置**。底层是页面通过 `mira://` 协议把选择交给 app 写进配置文件（网页本身在浏览器沙箱里写不了磁盘，只能用这种方式绕过去）。想手动改也行：把 bundle id 写进 `~/Library/Application Support/Mira/browser` 一行，例如 `com.google.Chrome`，删掉这行就恢复系统默认。
 - 它里面是**打包那一刻**的页面副本：网页更新了它不会自己变，要用新版得重新下 zip。
+
+**已实测（真机跑通）**：在 App 或网页 Mac 端选默认浏览器 → 配置落盘 → 下次双击开视频真的用那个浏览器（Chrome / Safari / 恢复默认，三步全过）。下拉顺序固定为：系统默认 → ① 谷歌 → ② Edge → ③ Safari → ④ 火狐 → 其余。注意：网页端的选择**仅对 macOS 的 Mira.app 生效**，非 Mac 只存本地、不会真改系统打开方式。更多对照见 [怎么用](https://roxwang.github.io/Mira/help.html)。
 - **Windows / Linux 不要下这个 .app**（那是 Mac 专用的）；Windows / Linux 用户请下上面的 `Mira-standalone.html`，或直接开网页。
 
 **Windows / Linux 想有个「桌面图标」怎么办？** 两个办法任选：
