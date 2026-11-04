@@ -7,82 +7,54 @@
 <style>
   :root{ --bg:#0f1115; --card:#1a1d24; --fg:#e9edf2; --mut:#9aa3b2; --acc:#4f9dff; --grn:#37c871; }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:28px 18px 60px}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:28px 18px 50px}
   .wrap{max-width:720px;margin:0 auto}
-  h1{font-size:26px;margin:0 0 4px}
-  .sub{color:var(--mut);margin:0 0 22px}
-  .cta{display:block;text-align:center;text-decoration:none;background:linear-gradient(135deg,var(--acc),#2f7be0);color:#fff;font-size:20px;font-weight:700;padding:22px;border-radius:14px;box-shadow:0 8px 24px rgba(79,157,255,.35);margin:0 0 8px}
-  .cta small{display:block;font-weight:400;font-size:13px;opacity:.9;margin-top:6px}
+  h1{font-size:24px;margin:0 0 4px}
+  .sub{color:var(--mut);margin:0 0 20px}
+  .cta{display:block;text-align:center;text-decoration:none;background:linear-gradient(135deg,var(--acc),#2f7be0);color:#fff;font-size:20px;font-weight:700;padding:20px;border-radius:14px;box-shadow:0 8px 24px rgba(79,157,255,.35)}
+  .cta small{display:block;font-weight:400;font-size:13px;opacity:.92;margin-top:6px}
   .cta:hover{filter:brightness(1.06)}
-  h2{font-size:17px;margin:30px 0 10px;border-left:3px solid var(--acc);padding-left:10px}
-  .card{background:var(--card);border:1px solid #262b34;border-radius:12px;padding:14px 16px;margin:10px 0}
-  .card b{color:#fff}
-  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:#26303d;color:var(--mut);margin-right:6px}
-  .tag.rec{background:rgba(55,200,113,.15);color:var(--grn)}
-  ul{margin:8px 0 0;padding-left:18px}
-  li{margin:6px 0}
+  h2{font-size:16px;margin:26px 0 8px;border-left:3px solid var(--acc);padding-left:10px}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px}
+  th,td{border:1px solid #262b34;padding:9px 10px;text-align:left;vertical-align:top}
+  th{background:#161a21;color:#fff}
+  td b{color:#fff}
+  .ok{color:var(--grn)}
+  .note{color:var(--mut);font-size:13px;margin:8px 0}
   a.lk{color:var(--acc);text-decoration:none}
   a.lk:hover{text-decoration:underline}
-  .ok{color:var(--grn)}
-  .note{color:var(--mut);font-size:13px}
+  code{background:#161a21;padding:1px 5px;border-radius:4px;font-size:13px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Mira — 怎么用</h1>
-  <p class="sub">一个为碎片时间设计的本地视频播放器。三种方式，随便选。</p>
+  <p class="sub">极简本地视频播放器。视频在你自己硬盘上，不上传、不联网。</p>
 
   <a class="cta" href="https://roxwang.github.io/Mira/">
     ▶ 免下载，直接用网页版
-    <small>点一下就能播，不用安装、不用更新 — 推荐大多数人用这个</small>
+    <small>点一下就能播，啥都不用装 — 推荐大多数人用这个</small>
   </a>
-  <p class="note" style="text-align:center">网页版就是 Mira 本体，功能最全、永远最新。</p>
 
-  <h2>三种方式，自由选</h2>
+  <h2>怎么用（一句话）</h2>
+  <p>打开上面的链接 → 点「打开视频」选文件（或拖进页面）→ 看完关掉，下次自动接着播。手机、电脑、平板都一样。</p>
 
-  <div class="card">
-    <span class="tag rec">推荐</span><b>网页版</b>（全平台 · 免安装）
-    <ul>
-      <li>点上面按钮直接打开即用，不占空间、不用更新。</li>
-      <li>联网就能用，永远是最新版。</li>
-    </ul>
-  </div>
+  <h2>四种方式，挑一个最合适的</h2>
+  <table>
+    <tr><th>你的情况</th><th>用这个</th><th>怎么弄</th></tr>
+    <tr><td><b>大多数人</b></td><td><b>网页版</b></td><td>直接打开链接，永远最新，无需任何操作</td></tr>
+    <tr><td>想要桌面图标、不占空间</td><td>浏览器「安装为应用」</td><td>打开链接 → 浏览器菜单 → 安装此站点为应用（和网页同一套，无下载）</td></tr>
+    <tr><td><b>Mac 用户</b>，要双击直开 / 整季自动连 / 断网</td><td><b>Mira.app</b>（仅 macOS）</td><td>下 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Mira-1.0.zip</a> → 解压得 <code>Mira.app</code> → 拖进「应用程序」</td></tr>
+    <tr><td>随身带一个文件 / <b>Windows·Linux 离线</b></td><td><b>独立 HTML</b>（全平台）</td><td>下 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Mira-standalone.html</a> → <b>双击用浏览器打开</b> → 点「打开视频」选文件就能看</td></tr>
+  </table>
+  <p class="note"><b>独立 HTML 是什么</b>：播放器本身存成的单文件，和网页同一套，只是落在你硬盘上、断网也能用。不是安装包，双击即可，更新就重新下一份。</p>
 
-  <div class="card">
-    <span class="tag">macOS</span><b>Mac App</b>（离线 · 双击直开）
-    <ul>
-      <li>下载 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Mira-1.0.zip</a> → 解压得到 <code>Mira.app</code> → 拖进「应用程序」。</li>
-      <li>额外能力：整季自动串联、设系统默认播放器、完全离线。</li>
-      <li>仅 macOS。</li>
-    </ul>
-  </div>
+  <h2>Mac 端已实测（真机跑通）</h2>
+  <p class="ok">✓ 在 App 或网页 Mac 端选默认浏览器 → 下次双击开视频就真用那个浏览器（Chrome / Safari / 恢复默认都验证过）。</p>
+  <p>下拉顺序固定：<b>系统默认 → ① 谷歌 → ② Edge → ③ Safari → ④ 火狐 → 其余</b>。<br>
+  <span class="note">注意：网页端的选择<b>只对 macOS 的 Mira.app 生效</b>；非 Mac 只存本地，不会真改系统打开方式。</span></p>
 
-  <div class="card">
-    <span class="tag">全平台</span><b>离线 HTML</b>（任意系统）
-    <ul>
-      <li>下载 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Mira-standalone.html</a>，双击就能用，不用联网、不用装 app。</li>
-      <li>适合 Windows / Linux，或想纯本地离线的人。</li>
-    </ul>
-  </div>
-
-  <h2>我实测过的结论（已真机验证）</h2>
-  <div class="card">
-    <p class="ok">✓ 默认浏览器同步逻辑已跑通</p>
-    <ul>
-      <li>在 App（或网页 Mac 端）里选默认浏览器 → 配置落盘 → 下次双击开视频真的用那个浏览器。</li>
-      <li>Chrome / Safari / 恢复系统默认，三步全部验证通过。</li>
-    </ul>
-  </div>
-  <div class="card">
-    <p><b>下拉顺序</b>：系统默认 → ① 谷歌 → ② Edge → ③ Safari → ④ 火狐 → 其余（Brave / Vivaldi / Opera / Arc / Chromium）。</p>
-  </div>
-  <div class="card">
-    <p class="note"><b>一点提醒</b>：网页端选的浏览器，仅对 macOS 的 Mira.app 生效；非 Mac 设备只在本地保存，不会真正改系统打开方式。Mac App 里选则是最终生效端。</p>
-  </div>
-
-  <p class="note" style="margin-top:28px;text-align:center">
-    源码与更新：<a class="lk" href="https://github.com/RoxWang/Mira">github.com/RoxWang/Mira</a>
-  </p>
+  <p class="note" style="margin-top:24px;text-align:center">源码与更新：<a class="lk" href="https://github.com/RoxWang/Mira">github.com/RoxWang/Mira</a></p>
 </div>
 </body>
 </html>
