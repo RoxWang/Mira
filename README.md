@@ -28,16 +28,7 @@
 1. **网页版**：直接打开最上面的链接，完事。
 2. **浏览器「安装为应用」**：打开链接 → 浏览器右上角菜单（Chrome / Edge 点 `⋮`）→「安装此站点为应用 / Install」→ 桌面出现图标。
 3. **Mac App**：① 点 [Releases](https://github.com/RoxWang/Mira/releases) → ② 点 `Mira-1.0.zip` 下载 → ③ 双击解压得到 `Mira.app` → ④ 拖进「应用程序」文件夹。
-4. **独立 HTML（断网 / 随身版）**：
-   - **怎么拿到**：去 [Releases](https://github.com/RoxWang/Mira/releases) 下载 `Mira-standalone.html`，**不用你自己造**。
-   - **它到底是什么**：就是播放器网页本身存成的一个单文件——开发者把那张网页直接另存发布，没有额外打包。所以双击它 = 用浏览器打开播放器。
-   - **怎么用**：下载后双击（会用你默认浏览器打开）→ 点页面上「打开视频」选文件就能看，**断网也行**。
-
-## Mac 端已实测（真机跑通）
-
-在 App 或网页 Mac 端里选默认浏览器 → 下次双击开视频就真用那个浏览器（Chrome / Safari / 恢复默认都验证过）。
-下拉顺序固定为：**系统默认 → ① Google Chrome → ② Microsoft Edge → ③ Safari → ④ Firefox → 其余**。
-注意：网页端的选择**只对 macOS 的 Mira.app 生效**；非 Mac 设备只存本地，不会真改系统打开方式。
+4. **独立 HTML（断网 / 随身版）**：去 [Releases](https://github.com/RoxWang/Mira/releases) 下载 `Mira-standalone.html` → 双击（用默认浏览器打开）→ 点「打开视频」选文件就能看，断网也行。
 
 ---
 Mira is a browser-based local video player. Open https://roxwang.github.io/Mira/ in any browser on Windows, macOS, iOS or Android, pick a local video, and it plays — no upload, no network, no cache. License: MIT

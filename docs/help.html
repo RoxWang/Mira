@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mira · 怎么用</title>
 <style>
-  :root{ --bg:#0f1115; --fg:#e9edf2; --mut:#9aa3b2; --acc:#4f9dff; --grn:#37c871; }
+  :root{ --bg:#0f1115; --fg:#e9edf2; --mut:#9aa3b2; --acc:#4f9dff; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:28px 18px 50px}
   .wrap{max-width:760px;margin:0 auto}
@@ -19,7 +19,6 @@
   th,td{border:1px solid #262b34;padding:9px 10px;text-align:left;vertical-align:top}
   th{background:#161a21;color:#fff}
   td b{color:#fff}
-  .ok{color:var(--grn)}
   .note{color:var(--mut);font-size:13px;margin:8px 0}
   a.lk{color:var(--acc);text-decoration:none}
   a.lk:hover{text-decoration:underline}
@@ -57,19 +56,8 @@
     <li><b>网页版</b>：直接打开最上面的链接，完事。</li>
     <li><b>浏览器「安装为应用」</b>：打开链接 → 浏览器右上角菜单（Chrome / Edge 点 <code>⋮</code>）→「安装此站点为应用 / Install」→ 桌面出现图标。</li>
     <li><b>Mac App</b>：① 点 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> → ② 点 <code>Mira-1.0.zip</code> 下载 → ③ 双击解压得到 <code>Mira.app</code> → ④ 拖进「应用程序」文件夹。</li>
-    <li><b>独立 HTML（断网 / 随身版）</b>：
-      <ul>
-        <li><b>怎么拿到</b>：去 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> 下载 <code>Mira-standalone.html</code>，<b>不用你自己造</b>。</li>
-        <li><b>它到底是什么</b>：就是播放器网页本身存成的一个单文件——开发者把那张网页直接另存发布，没有额外打包。所以双击它 = 用浏览器打开播放器。</li>
-        <li><b>怎么用</b>：下载后双击（会用你默认浏览器打开）→ 点页面上「打开视频」选文件就能看，<b>断网也行</b>。</li>
-      </ul>
-    </li>
+    <li><b>独立 HTML（断网 / 随身版）</b>：去 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> 下载 <code>Mira-standalone.html</code> → 双击（用默认浏览器打开）→ 点「打开视频」选文件就能看，断网也行。</li>
   </ol>
-
-  <h2>Mac 端已实测（真机跑通）</h2>
-  <p class="ok">✓ 在 App 或网页 Mac 端选默认浏览器 → 下次双击开视频就真用那个浏览器（Chrome / Safari / 恢复默认都验证过）。</p>
-  <p>下拉顺序固定：<b>系统默认 → ① Google Chrome → ② Microsoft Edge → ③ Safari → ④ Firefox → 其余</b>。<br>
-  <span class="note">注意：网页端的选择<b>只对 macOS 的 Mira.app 生效</b>；非 Mac 只存本地，不会真改系统打开方式。</span></p>
 
   <p class="note" style="margin-top:24px;text-align:center">源码与更新：<a class="lk" href="https://github.com/RoxWang/Mira">github.com/RoxWang/Mira</a></p>
 </div>
