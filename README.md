@@ -62,8 +62,8 @@
   1. 拿你双击的那个视频，把**同目录的整季**读成播放列表；
   2. 把同目录**同名字幕**（含 `.zh-Hans` / `.dual` 这类）一次读好挂上 —— 网页版要你自己去选文件夹；
   3. 本机装了 ffmpeg 的话，遇到 Chrome 不认的容器（mkv 等）自动转封装成 mp4 再播。
-- 它**只能在 macOS 上运行**。用哪个浏览器打开 = **你系统的默认浏览器**（Chrome / Edge / Brave / Vivaldi / Safari 都行），不弹任何窗。
-- 想换浏览器：系统设置 → 桌面与程序坞 → 默认网页浏览器，改完下次双击视频就生效。想固定用某个而不动系统设置，把 bundle id 写进 `~/Library/Application Support/Mira/browser` 一行，例如 `com.google.Chrome`。
+- 它**只能在 macOS 上运行**。用哪个浏览器打开，**默认跟你系统的默认浏览器走**（Chrome / Edge / Brave / Vivaldi / Firefox / Safari / Opera / Arc 都行），不弹任何窗。
+- **想固定在某个浏览器**：打开 app → 设置 → 浏览器，下拉挑一个 → Apply，下次双击视频就生效，**不用去动系统设置**。底层是页面通过 `mira://` 协议把选择交给 app 写进配置文件（网页本身在浏览器沙箱里写不了磁盘，只能用这种方式绕过去）。想手动改也行：把 bundle id 写进 `~/Library/Application Support/Mira/browser` 一行，例如 `com.google.Chrome`，删掉这行就恢复系统默认。
 - 它里面是**打包那一刻**的页面副本：网页更新了它不会自己变，要用新版得重新下 zip。
 - **Windows 上不要下这个**，Windows 用户开网页就行。
 
