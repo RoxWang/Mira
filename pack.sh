@@ -15,7 +15,7 @@ SRC="$(cd "$(dirname "$0")" && pwd)/src"
 # ── 找 app ──
 APP="${MIRA_APP:-}"
 if [[ -z "$APP" ]]; then
-  for p in "$HOME/Applications/Mira.app" "/Applications/Mira.app" "$HOME/Documents/Mira/Mira.app"; do
+  for p in "$HOME/Applications/Mira.app" "/Applications/Mira.app" "$HOME/Documents/Mira/dist/Mira.app" "$HOME/Documents/Mira/Mira.app"; do
     [[ -d "$p" ]] && { APP="$p"; break; }
   done
 fi
