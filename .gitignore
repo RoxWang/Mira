@@ -1,2 +1,4 @@
 dist/
 .DS_Store
+# WorkBuddy 项目记忆与工作日志：本机内部笔记，不进公开仓库
+.workbuddy/

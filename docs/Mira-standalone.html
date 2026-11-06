@@ -9,17 +9,19 @@
   :root {
     color-scheme: dark;
     /* 全站唯一的「不透明度」—— 由「播放 → 外观 → 不透明度」一个滑杆改写。
-       页面上所有浮起来的东西都用同一个值：左右两块玻璃面板、顶部按键提示、
-       左上角拖进度 HUD、进度条悬停预览、毛玻璃字幕、中间那个大三角、
-       以及屏幕正中那个确认弹窗。改一处，全站跟着变。
-       ⚠️ 配方里**只有模糊和压暗，没有 saturate()，底色一律纯黑**。
-          上一版带 saturate() + 蓝灰底色，红画面隔着玻璃会发闷、偏色 ——
-          苹果液态玻璃在 Clear 模式下不给画面染色，这里照做：它就是一块无色玻璃。 */
-    --op: .104;
-    --oblur: 10.8px;
-    --obr: .932;
+       左右两块面板、顶部按键提示、拖进度 HUD、进度条悬停预览、中间大三角、
+       滑块气泡、主页卡片，都用同一个值。
+       ⚠️ 这里刻意没有 backdrop-filter / blur()：
+          Chrome 在 macOS 上，只要有一层「实时采样背后画面」的毛玻璃浮在 <video> 上，
+          这层每次出现 / 消失 / 滑入都会逼视频合成层重排 —— 表现就是
+          「鼠标一碰播放列表或设置，整屏闪一下」，还会留下偏移压扁的旧帧。
+          现在统一改成不采样背后的半透明实底 + 渐变高光模拟磨砂：
+          不再透出动态模糊，但浮层开关与视频层彻底解耦。 */
+    --op: .58;
   }
   * { box-sizing: border-box; }
+  /* 这些浮层频繁显隐：各自独立成合成层，显隐只在自己那层里做，不惊动底下的视频层 */
+  #seek, #homeBtn, #osd, #hud, #slTip, #prev, #tri, .glass { will-change: transform, opacity; }
   /* overscroll-behavior-x: contain —— 挡掉 macOS 双指横滑触发的浏览器「后退/前进」手势，
      不然在进度条上划两下会直接把页面划没 */
   html, body {
@@ -109,7 +111,6 @@
   #prev {
     position: absolute; bottom: 26px; transform: translateX(-50%);
     width: 172px; background: rgba(0,0,0, var(--op));
-    -webkit-backdrop-filter: blur(var(--oblur)); backdrop-filter: blur(var(--oblur));
     border: 1px solid rgba(255,255,255,.14);
     border-radius: 8px; overflow: hidden; display: none; pointer-events: none;
     box-shadow: 0 10px 28px rgba(0,0,0,.6);
@@ -130,17 +131,17 @@
     color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.85);
   }
 
-  /* ══ 液态玻璃：左边播放列表 / 右边设置面板，同一套配方 ══
+  /* ══ 半透明磨砂面板：左边播放列表 / 右边设置，同一套配方 ══
      不贴边、不全遮盖，是"一片玻璃飘到画面上"。
-     关键在 backdrop-filter 里的 brightness() —— 把背后的画面压暗但**不压死**，
-     所以你依然看得到它在动，只是隔了一层毛玻璃，白字照样看得清。
-     这三个值由「播放 → 面板模糊」实时改写，从清透一路拉到磨砂。 */
+     ⚠️ 不用 backdrop-filter：它会实时采样背后的 <video>，面板每次滑入 / 收起
+        都迫使视频合成层重排 —— 这正是「鼠标一碰就闪一下」的根因，
+        也是以前得把视频 display:none 一帧、重建合成层来擦屁股的原因。
+        改用不采样背后的半透明实底 + 上沿高光 + 外阴影模拟磨砂，
+        观感接近、不再透出动态模糊，但浮层开关与视频层彻底解耦。 */
   .glass {
     position: absolute; top: 14px; bottom: 14px;
     display: flex; flex-direction: column; overflow: hidden;
     background: rgba(18, 12, 38, var(--op));
-    -webkit-backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
-    backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
     border: 1px solid rgba(255, 255, 255, .13);
     border-radius: 20px;
     box-shadow:
@@ -455,7 +456,6 @@
   #tri::before {
     content: ""; position: absolute; width: 84px; height: 84px; border-radius: 50%;
     background: rgba(0,0,0, var(--op));
-    -webkit-backdrop-filter: blur(var(--oblur)); backdrop-filter: blur(var(--oblur));
     border: 1px solid rgba(255,255,255,.16);
   }
   #tri i {
@@ -476,8 +476,6 @@
     /* 跟大面板同一个不透明度，只是小件面积小，再垫一点底，
        否则纯 20% 在亮画面上字会飘。差值固定，跟着滑杆一起动。 */
     background: rgba(0,0,0, var(--op));
-    -webkit-backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
-    backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
     border: 1px solid rgba(255,255,255,.10);
     border-radius: 999px; padding: 5px 14px;
     font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums;
@@ -495,8 +493,6 @@
     display: none; align-items: center; gap: 10px;
     padding: 7px 12px; border-radius: 11px;
     background: rgba(0,0,0, var(--op));
-    -webkit-backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
-    backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
     border: 1px solid rgba(0,0,0,.32);
     box-shadow: 0 6px 20px rgba(0,0,0,.35);
     pointer-events: none; z-index: 22;
@@ -533,8 +529,6 @@
     position: fixed; z-index: 40; pointer-events: none;
     padding: 4px 10px; border-radius: 999px;
     background: rgba(0,0,0, var(--op));
-    -webkit-backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
-    backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
     border: 1px solid rgba(255,255,255,.12);
     font: 600 12px/1 -apple-system, "PingFang SC", system-ui, sans-serif;
     font-variant-numeric: tabular-nums; color: #fff;
@@ -553,16 +547,15 @@
     position: fixed; inset: 0; z-index: 60; display: none;
     align-items: center; justify-content: center;
     background: rgba(0,0,0,.34);
-    /* ⚠️ 这里故意不加 backdrop-filter：全屏的 backdrop-filter 会把视频层
-       整个重排，实测关掉弹窗后画面会被压扁、右侧留黑，必须刷新才恢复。
-       弹窗本体（#dlg）也已去掉 blur、改实底 —— 同一条原则，避免同样压画面。 */
+    /* 不加 backdrop-filter：它会采样背后的 <video> 并把视频层整个重排。
+       现在全站浮层统一用不采样背后的半透明实底，弹窗本体（#dlg）也是实底。 */
   }
   #mask.on { display: flex; }
   #dlg {
     width: 296px; max-width: calc(100vw - 40px);
     padding: 19px 22px 15px;
     border-radius: 13px; text-align: center;
-    background: rgba(20,22,26,.97);   /* 实底：不再用 backdrop-filter —— 它会把视频层重排，关弹窗后画面位移 */
+    background: rgba(20,22,26,.97);   /* 实底：全站统一不用 backdrop-filter，避免重排视频层 */
     border: 1px solid rgba(255,255,255,.16);
     box-shadow:
       0 30px 70px -12px rgba(0,0,0,.72),
@@ -624,8 +617,6 @@
     display: flex; flex-direction: column;
     border-radius: 20px; padding: 16px 16px 12px;
     background: rgba(26,17,52,var(--op));
-    -webkit-backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
-    backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
     border: 1px solid rgba(255,255,255,.13);
     box-shadow: 0 26px 64px -14px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.20);
   }
@@ -1338,15 +1329,14 @@ function fmtVal(k, val) {
   return String(val);
 }
 /* 不透明度：一个数字管全站。
-   --op 是浮层自己的底色（纯黑，只降亮度），--oblur 是模糊，--obr 是压暗。
-   三个都只动「亮多少」，不动「什么颜色」—— 隔着玻璃看红还是红，不会发闷偏黄。
-   推到 0% 就真的是一块没有颜色的玻璃：底色归零、不压暗；推到 100% 是一块磨砂。 */
+   只改 --op 这一个值：0% 是较透的磨砂、100% 是近乎实底，中间连续可调。
+   模糊 / 压暗那两项以前喂给 backdrop-filter，已随毛玻璃一起移除。
+   没有毛玻璃之后，改这个变量只会让几个浮层的背景重算，不再碰视频合成层。 */
 function applyOpacity() {
   var g = Math.max(0, Math.min(100, SET.opacity)) / 100;
+  var val = (0.46 + g * 0.48).toFixed(3);
   var s = document.documentElement.style;
-  s.setProperty('--op',    (0.06 + g * 0.42).toFixed(3));
-  s.setProperty('--oblur', (6 + g * 24).toFixed(1) + 'px');
-  s.setProperty('--obr',   (1.00 - g * 0.34).toFixed(3));
+  if (s.getPropertyValue('--op').trim() !== val) s.setProperty('--op', val);
 }
 
 /* ══ 播放记忆 ══ */
@@ -2330,25 +2320,11 @@ function layoutVideo() {
   v.style.transform = 'rotate(' + rot + 'deg)';
 }
 
-/* 重置 / 换剧 / 关弹窗后，macOS 上 Chrome 偶尔把视频的旧画面帧留在合成层里
-   （画面偏移 / 压扁），要等别的东西（比如带毛玻璃的面板滑入）倒逼一次重绘才恢复。
-   终极手段：让视频整个离屏再回来 —— display:none 时它的合成层被物理销毁，
-   回来必然是一张按当前正确几何画的新层。
-   ⚠️ 关键：none 和 '' 必须拆到两帧里。写在同一个同步任务里会被 Chrome
-   合并成"净零变化"（先藏又立刻显示 = 没变），层根本不重建，bug 就治不住。 */
-function fixVideoLayer() {
-  /* 无论如何都要把 display 恢复回来 —— 以前只有一条 rAF 链，中间任何一步没跑到
-     （页面切到后台 rAF 被节流、回调里抛异常）视频就永久 display:none = 纯黑屏。 */
-  var restore = function () {
-    try { v.style.display = ''; layoutVideo(); } catch (e) {}
-  };
-  try { layoutVideo(); } catch (e) {}
-  v.style.display = 'none';
-  requestAnimationFrame(function () {
-    requestAnimationFrame(restore);
-  });
-  setTimeout(restore, 300);          /* 兜底：rAF 不保证一定跑得到 */
-}
+/* 以前这里有个重建视频合成层的函数：面板收起后把 <video> 临时 display:none 一帧，
+   强制销毁并重建合成层，用来擦掉 backdrop-filter 留下的偏移 / 压扁旧帧。
+   代价是每次开关面板都黑一帧 —— 用户看到的「屏幕闪一下」就是它。
+   现在浮层不再采样视频层，旧帧错位的诱因没了，这个函数连同所有调用一起删掉：
+   鼠标怎么碰 UI，都不会再去动 <video> 一个字节。 */
 
 /* ── 播放控制 ── */
 function play() { v.play().catch(function () {}); }
@@ -2418,7 +2394,6 @@ function load(src, label, subText, subName, idx, sub2Text, sub2Name) {
 }
 v.addEventListener('loadedmetadata', function () {
   layoutVideo();
-  fixVideoLayer();   /* 换剧/切集 = 视频几何变了 —— 主动逼合成层重画一帧，不然 macOS Chrome 偶发把旧帧留在层里（画面偏移/压扁） */
   showInfo();
   if (!pendingResume) return;
   var t = pendingResume; pendingResume = 0;
@@ -2429,12 +2404,12 @@ v.addEventListener('loadedmetadata', function () {
   flash(t2('Resume ', '接着上次 ') + fmt(t));
 });
 v.addEventListener('resize', layoutVideo);
-/* 窗口缩放是连续触发的 —— 帧帧都逼重绘太浪费，收手后 220ms 补一次就够 */
+/* 窗口缩放是连续触发的 —— 收手后 220ms 补算一次几何就够 */
 var resizeFixT = null;
 window.addEventListener('resize', function () {
   layoutVideo();
   clearTimeout(resizeFixT);
-  resizeFixT = setTimeout(fixVideoLayer, 220);
+  resizeFixT = setTimeout(layoutVideo, 220);
 });
 
 /* ── 播放列表 ── */
@@ -2485,7 +2460,6 @@ function openSet(on) {
   setp.classList.toggle('on', !!on);
   document.body.classList.toggle('hasset', !!on);
   if (on) showUI();
-  else fixVideoLayer();   /* 设置面板收起后视频层重绘一遍，避免画面残留旧帧（偏移/压扁） */
 }
 function loadEntry(i) {
   if (i < 0 || i >= LIST.length) { flash(i < 0 ? t('First episode') : t('Last episode')); return; }
@@ -2624,7 +2598,6 @@ function closeConfirm() {
   mask.classList.remove('on');
   dlgOk = null;
   layoutVideo();          /* 遮罩收掉之后把画面几何重算一遍 —— 画面永远铺回满窗 */
-  fixVideoLayer();        /* 关弹窗后视频合成层可能留旧帧（画面偏移/压扁），逼它重画一帧 */
   if (dlgPrev && dlgPrev.focus) { try { dlgPrev.focus(); } catch (e) {} }
   dlgPrev = null;
 }
@@ -2691,7 +2664,7 @@ window.addEventListener('keydown', function (e) {
   document.getElementById('resetPic').addEventListener('click', function () {
     SET.bright = 100; SET.contrast = 100; SET.satur = 100; SET.hue = 0;
     SET.rotate = 0; SET.zoom = 100; SET.aspect = 0; SET.fill = 0;
-    saveSet(); applySet(); fixVideoLayer(); flash(t('Picture reset'));
+    saveSet(); applySet(); flash(t('Picture reset'));
   });
   document.getElementById('clearPos').addEventListener('click', function () {
     var c = posCount(0);
@@ -2722,7 +2695,6 @@ window.addEventListener('keydown', function (e) {
         saveSet();
         applyLang();
         applySet();
-        fixVideoLayer();
         paintHist();
         flash(t2('Settings restored', '设置已恢复默认'));
       }
