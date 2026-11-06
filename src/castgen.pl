@@ -21,6 +21,7 @@
 
 use strict;
 use warnings;
+use Digest::MD5 qw(md5_hex);   # 给每部片的重封装产物算一个独立目录名
 
 my ($page, $video, $out) = @ARGV;
 die "usage: castgen.pl <page> <video> <out>\n" unless defined $page && defined $video && defined $out;
@@ -237,8 +238,11 @@ sub remux {
     my $sz = -s $src;
     return '' if !defined $sz || $sz <= 0 || $sz > 3221225472;   # 超过 3 GB 就不折腾硬盘
 
-    system('/bin/rm', '-rf', $outdir);
+    # 只清自己的产物，别把整个 remux 目录端掉：
+    # 以前所有 TS 共用 $TMPDIR/Mira/remux/remux.mp4，先后开两部会互相覆盖，
+    # 前一个窗口刷新就被拽到后一部 —— 每部片一个独立子目录就没这事了。
     system('/bin/mkdir', '-p', $outdir);
+    system('/bin/rm', '-f', $outdir . '/remux.mp4');
     my $dst = $outdir . '/remux.mp4';
 
     my $q = $src;  $q =~ s/'/'\\''/g;
@@ -254,7 +258,8 @@ if (!$blocked) {
     my $ct = ctOf($video);
     # 编码本身 Chrome 也不认（MPEG-2 / VC-1 这类）→ 换盒子没意义，别浪费时间
     if ($ct ne '' && !$OKCT{$ct} && ($VCODEC eq '' || $OKVC{$VCODEC})) {
-        my $dirOut = ($ENV{TMPDIR} || '/tmp') . '/Mira/remux';
+        # 路径做 hash：同一部片重复开复用同一份，不同片互不干扰。$TMPDIR 重启自动清。
+        my $dirOut = ($ENV{TMPDIR} || '/tmp') . '/Mira/remux/' . substr(md5_hex($video), 0, 12);
         my $r = remux($video, $dirOut);
         if ($r ne '') { $cur = 'file://' . uesc($r); }
     }
