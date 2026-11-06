@@ -1,0 +1,2 @@
+# 让 GitHub Pages 直接静态托管 docs/，跳过 Jekyll 构建。
+# docs/ 里全是成品 HTML 和一个 zip 发布包，不需要任何模板处理。
