@@ -1064,6 +1064,16 @@ var holdTimer = null, fasting = false, started = false;
 var idleTimer = null;
 var dragging = false;
 
+/* ── 拖进度共用：把 seek 降频 ──
+   视频每换一帧，压在画面上的液态玻璃（backdrop-filter）就得重新采样一次。
+   触控板一秒能送来上百个指针 / wheel 事件，以前每个都直写 v.currentTime，
+   等于每秒让解码器 + 玻璃重采样各跑上百次 —— 这就是「双指拖进度条很卡」。
+   现在一帧最多重画一次 UI，主视频真实 seek 至少隔 90ms 才做一次。 */
+var SEEK_MIN_GAP = 90;      /* 两次真实 seek 的最小间隔（毫秒）*/
+var lastSeekAt = 0;
+var dragPct = 0;            /* 拖动时进度条画在手指位置，不等异步 seek 回来 */
+var dragPendT = -1, dragRAF = 0, dragLastT = -1;
+
 /* ══ 设置 ══
    存在 Chrome 自己的 localStorage 里（origin 是 file://），不是散落在硬盘上的文件。 */
 var SETV = 9;   /* 设置结构版本号：改了 DEF 的含义就 +1，好让老存档能迁移过来 */
@@ -2016,7 +2026,9 @@ function stopFast() {
 /* ── 进度条 ── */
 function paint() {
   var cur = v.currentTime || 0, tot = v.duration || 0;
-  var p = tot ? Math.min(100, cur / tot * 100) : 0;
+  /* 拖动中 seek 是异步的：拿 v.currentTime 画条会滞后、跟手指来回弹。
+     改成直接画手指位置，松手后才回到真实播放位置。 */
+  var p = dragging ? dragPct : (tot ? Math.min(100, cur / tot * 100) : 0);
   sCur.style.width = p + '%';
   thumb.style.left = p + '%';
   sBuf.style.width = (tot && v.buffered.length ? Math.min(100, v.buffered.end(v.buffered.length - 1) / tot * 100) : 0) + '%';
@@ -2043,7 +2055,7 @@ function requestPV(t, pct) {
   clearTimeout(pvWatch);
   pvWatch = setTimeout(function () { pvAt = -999; }, 1500);
 }
-function hidePV() { prevBox.style.display = 'none'; }
+function hidePV() { if (prevBox.style.display !== 'none') prevBox.style.display = 'none'; }
 function dropPV() {
   hidePV();
   try { pv.removeAttribute('src'); pv.load(); } catch (err) {}
@@ -2271,19 +2283,25 @@ var scrubbing = false, wasPlaying = false, scrubTimer = null;
 function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
 
 /* 左上角那个 HUD：当前时间 / 总时长 + 一条细进度（跟 IINA 一个位置、一个样）。
-   放左上角是因为中间是画面、底部是字幕，最上面一条通常是天空或黑边 —— 最不挡观看。 */
-function showHUD() {
+   放左上角是因为中间是画面、底部是字幕，最上面一条通常是天空或黑边 —— 最不挡观看。
+   ⚠️ 拖进度时 v.currentTime 是滞后的，所以允许传入「手指指着的时间」；
+      每个值都先比对再写，高频拖动时不会把这块带毛玻璃的 HUD 反复重排。 */
+function showHUDAt(t) {
   if (!isFinite(v.duration) || v.duration <= 0) return;
-  hudState.textContent = v.paused ? '❚❚' : '▶';
-  hudCur.textContent = fmt(v.currentTime);
-  hudTot.textContent = fmt(v.duration);
-  hudC.style.width = Math.min(100, Math.max(0, v.currentTime / v.duration * 100)) + '%';
-  hud.classList.add('on');
+  var st = v.paused ? '❚❚' : '▶';
+  if (hudState.textContent !== st) hudState.textContent = st;
+  var c = fmt(t), tot = fmt(v.duration);
+  if (hudCur.textContent !== c) hudCur.textContent = c;
+  if (hudTot.textContent !== tot) hudTot.textContent = tot;
+  var w = Math.min(100, Math.max(0, t / v.duration * 100)) + '%';
+  if (hudC.style.width !== w) hudC.style.width = w;
+  if (!hud.classList.contains('on')) hud.classList.add('on');
   clearTimeout(hudTimer);
   /* 拖动中 / 暂停中 → 一直亮（跟 IINA：暂停时左上角常驻显示时间+片长）；其余半秒后收 */
   if (scrubbing || v.paused) return;
   hudTimer = setTimeout(function () { hud.classList.remove('on'); }, 800);
 }
+function showHUD() { showHUDAt(v.currentTime || 0); }
 
 function scrubStart() {
   if (scrubbing) return;
@@ -2294,7 +2312,9 @@ function scrubStart() {
 function finishScrub() {
   if (!scrubbing) return;
   scrubbing = false;
-  if (seekRAF) { cancelAnimationFrame(seekRAF); seekRAF = 0; pendSec = 0; }
+  if (seekRAF) { cancelAnimationFrame(seekRAF); seekRAF = 0; }
+  /* 降频后可能还有没写出去的增量，松手时必须补上，不然最后一段划动会丢 */
+  if (pendSec) { var s = pendSec; pendSec = 0; seekBy(s); }
   if (wasPlaying) play();       /* 手一松 → 从这一帧接着播 */
   wasPlaying = false;
   showHUD();
@@ -2314,11 +2334,18 @@ function holdScrub() {
 
 /* 一帧只写一次 currentTime：wheel 一秒能来上百个事件，
    每个都去 seek 会把上一次的解码打断 —— 那就是"来回拖卡顿掉帧"的来源。
-   增量先攒着，动画帧里一次性写进去，视频就有时间把真画面画出来。 */
+   增量先攒着；而且真实 seek 至少隔 SEEK_MIN_GAP 才做一次：
+   每换一帧，画面上那些液态玻璃就得重新采样一次，seek 太密玻璃就跟着一起卡。
+   没到点就继续等下一帧，增量一直攒着不丢（松手时 finishScrub 会补写）。 */
 var pendSec = 0, seekRAF = 0;
 function flushSeek() {
   seekRAF = 0;
   if (!pendSec) return;
+  if (nowMs() - lastSeekAt < SEEK_MIN_GAP) {
+    seekRAF = requestAnimationFrame(flushSeek);
+    return;
+  }
+  lastSeekAt = nowMs();
   var s = pendSec; pendSec = 0;
   seekBy(s);
   showHUD();
@@ -2847,33 +2874,91 @@ window.addEventListener('pagehide', posPut);
 window.addEventListener('beforeunload', posPut);
 document.addEventListener('visibilitychange', function () { if (document.hidden) posPut(); });
 
-/* ── 进度条：点一下跳、按住拖 ── */
+/* ── 进度条：点一下跳、按住拖 ──
+   ⚠️ 触控板 pointermove 一秒能来上百个。以前每个都直写 v.currentTime，
+      还顺手让悬停预览用的第二个 <video> 也 seek —— 两个解码器一起被打断，
+      加上液态玻璃跟着每帧重采样，表现就是「拖着特别卡、画面一跳一大截」。
+      现在：① 一帧最多重画一次 UI；② 主视频至少隔 90ms 才真 seek 一次；
+      ③ 拖动期间暂停，不边播边 seek；④ 拖动期间完全不碰预览视频。 */
 function posTime(x) {
   var r = seek.getBoundingClientRect();
   var p = Math.min(1, Math.max(0, (x - r.left) / r.width));
   return p * (isFinite(v.duration) ? v.duration : 0);
 }
+function clampT(t) {
+  var d = isFinite(v.duration) ? v.duration : 0;
+  if (!d) return 0;
+  return Math.min(Math.max(0, d - 0.05), Math.max(0, t));
+}
+/* 只画 UI：进度条 + HUD 都跟着手指走，不依赖异步 seek 回来的 currentTime */
+function uiAt(t) {
+  var d = isFinite(v.duration) ? v.duration : 0;
+  if (!d) return;
+  dragPct = Math.min(100, Math.max(0, t / d * 100));
+  var w = dragPct + '%';
+  if (sCur.style.width !== w) sCur.style.width = w;
+  if (thumb.style.left !== w) thumb.style.left = w;
+  showHUDAt(t);
+}
+function dragFlush() {
+  dragRAF = 0;
+  if (!dragging || dragPendT < 0) return;
+  var t = dragPendT; dragPendT = -1;
+  var now = nowMs();
+  if (now - lastSeekAt >= SEEK_MIN_GAP) {
+    lastSeekAt = now;
+    if (Math.abs((v.currentTime || 0) - t) > 0.02) v.currentTime = t;
+  }
+  uiAt(t);
+}
+function dragQueue(t) {
+  dragPendT = clampT(t);
+  dragLastT = dragPendT;       /* 帧把目标消费掉之后，松手仍要能拿到最后位置 */
+  if (!dragRAF) dragRAF = requestAnimationFrame(dragFlush);
+}
+/* 松手：把最后那一下准确落位。
+   降频帧可能只重画了 UI、没真 seek，此时 dragPendT 已经是 -1，
+   所以必须另存一个 dragLastT，否则松手后画面会弹回上一次真实 seek 的位置。 */
+function dragCommit() {
+  if (dragRAF) { cancelAnimationFrame(dragRAF); dragRAF = 0; }
+  dragPendT = -1;
+  var t = dragLastT; dragLastT = -1;
+  if (t < 0) return;
+  if (Math.abs((v.currentTime || 0) - t) > 0.02) v.currentTime = t;
+  uiAt(t);
+}
+function endDrag(e) {
+  if (!dragging) return;
+  dragCommit();
+  dragging = false; seek.classList.remove('drag');
+  if (e) { try { seek.releasePointerCapture(e.pointerId); } catch (err) {} }
+  if (!scrubbing) {
+    play();                     /* 保持原来的行为：点过 / 拖过进度条后继续播 */
+    paint();
+    /* 拖动期间 HUD 常驻；松手后 800ms 收起（不依赖 play() 的状态翻转）*/
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(function () { hud.classList.remove('on'); }, 800);
+  }
+}
 seek.addEventListener('pointerdown', function (e) {
   if (!hasSrc || !isFinite(v.duration)) return;
   dragging = true; seek.classList.add('drag');
   try { seek.setPointerCapture(e.pointerId); } catch (err) {}
-  v.currentTime = posTime(e.clientX);
-  if (v.paused) play();
-  showHUD();                       /* 一按就亮 —— 别等 play 事件兜底 */
+  hidePV();                      /* 拖动时不需要缩略预览，别让第二个 video 一起 seek */
+  v.pause();                     /* 停住了才解码得动，不会边播边 seek */
+  dragQueue(posTime(e.clientX));
   e.stopPropagation();
 });
 seek.addEventListener('pointermove', function (e) {
   if (!isFinite(v.duration)) return;
   var r = seek.getBoundingClientRect();
   var pct = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * 100;
-  if (dragging) { v.currentTime = posTime(e.clientX); showHUD(); }   /* 拖动全程常驻：每次 move 都把 800ms 淡出计时器重置 */
-  requestPV((isFinite(v.duration) ? pct / 100 * v.duration : 0), pct);
+  var t = (isFinite(v.duration) ? pct / 100 * v.duration : 0);
+  if (dragging) dragQueue(t);
+  else requestPV(t, pct);
 });
-seek.addEventListener('pointerup', function (e) {
-  dragging = false; seek.classList.remove('drag');
-  try { seek.releasePointerCapture(e.pointerId); } catch (err) {}
-  paint();
-});
+seek.addEventListener('pointerup', endDrag);
+seek.addEventListener('pointercancel', endDrag);
 seek.addEventListener('pointerleave', function () { if (!dragging) { hidePV(); paint(); } });
 
 /* ── 画面上：单击播放/暂停，双击全屏 ── */
