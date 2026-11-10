@@ -118,19 +118,28 @@ if [[ -f "$OUT" && -n "$PKG_APP" ]]; then
     NEED_ZIP=0
   fi
 fi
-#   包里若混进 ._ 开头的 AppleDouble 垃圾（旧版 ditto 默认会带），别人用
-#   Windows / Linux 解压会看到一堆莫名其妙的伴生文件 —— 一并强制重打成干净包。
-if [[ -f "$OUT" ]] && unzip -Z1 "$OUT" 2>/dev/null | grep -q '/\._'; then
-  NEED_ZIP=1
-fi
 if (( NEED_ZIP )); then
   [[ -n "$PKG_APP" ]] || { echo "没有可用的 App 包，无法重打发布包"; exit 1; }
-  # --norsrc --noextattr：不带资源分支 / 扩展属性，zip 里只有一个干净的 Mira.app
-  ditto -c -k --keepParent --norsrc --noextattr "$PKG_APP" "$OUT"
-  note "[发布包] $OUT 已重打（$(du -h "$OUT" | cut -f1)，单一 App、无 AppleDouble）"
+  # ⚠️ 千万别加 --norsrc / --noextattr：Contents/MacOS/reel-launch 是 zsh 脚本，
+  #    ad-hoc 给它的签名存在扩展属性里，ditto 靠 ._ AppleDouble 把它带进 zip。
+  #    丢掉那些 ._ 文件 = 解压后 codesign -v 报 "code object is not signed at all"，
+  #    用户打开就提示「已损坏」。那些 ._ 不是垃圾，是签名的一部分。
+  ditto -c -k --keepParent "$PKG_APP" "$OUT"
+  note "[发布包] $OUT 已重打（$(du -h "$OUT" | cut -f1)，单一 App）"
 else
   note "[发布包] $OUT 内容未变，跳过重打"
 fi
+# 打完必须真解压验一次签 —— 坏包发出去，别人下载就是「已损坏」。
+# macOS 归档实用工具 / ditto 会还原 ._ 里的签名属性；命令行 unzip 不会，
+# 所以这里用 ditto 解压，跟用户双击 zip 的行为一致。
+VERIFY_TMP="$(mktemp -d "${TMPDIR:-/tmp}/mira-verify-XXXXXX")"
+if ! ditto -x -k "$OUT" "$VERIFY_TMP" 2>/dev/null || ! codesign -v "$VERIFY_TMP/Mira.app" 2>/dev/null; then
+  rm -rf "$VERIFY_TMP"
+  echo "❌ 发布包解压后签名无效，已中止同步：$OUT"
+  exit 1
+fi
+rm -rf "$VERIFY_TMP"
+note "[发布包] 解压验签通过（别人下载能正常打开）"
 
 # ── 5. GitHub 仓库（push 后 Pages 自动构建）──
 if (( PUSH )); then

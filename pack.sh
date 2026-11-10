@@ -53,5 +53,15 @@ echo "已重新签名（ad-hoc），校验通过"
 VER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null || echo 1.0)"
 OUT="${OUT:-$(cd "$(dirname "$0")" && pwd)/docs/Mira-$VER.zip}"
 mkdir -p "$(dirname "$OUT")"
-ditto -c -k --keepParent --norsrc --noextattr "$APP" "$OUT"
-echo "已生成 $OUT（$(du -h "$OUT" | cut -f1)，单一 App、无 AppleDouble）"
+# ⚠️ 不能加 --norsrc / --noextattr：reel-launch 是脚本，签名存在扩展属性里，
+#    ditto 靠 ._ AppleDouble 带进 zip；丢掉它解压后就验不过签（提示「已损坏」）。
+ditto -c -k --keepParent "$APP" "$OUT"
+echo "已生成 $OUT（$(du -h "$OUT" | cut -f1)，单一 App）"
+VERIFY_TMP="$(mktemp -d "${TMPDIR:-/tmp}/mira-verify-XXXXXX")"
+if ! ditto -x -k "$OUT" "$VERIFY_TMP" 2>/dev/null || ! codesign -v "$VERIFY_TMP/Mira.app" 2>/dev/null; then
+  rm -rf "$VERIFY_TMP"
+  echo "❌ 解压验签失败，这个包不能用：$OUT"
+  exit 1
+fi
+rm -rf "$VERIFY_TMP"
+echo "解压验签通过"
