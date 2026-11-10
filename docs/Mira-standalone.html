@@ -1500,7 +1500,17 @@ function posDelete(key) {
     var last = JSON.parse(localStorage.getItem('mira.last') || 'null');
     if (last && last.src === key) localStorage.removeItem('mira.last');
     var cur = loadCur();
-    if (cur && cur.src === key) localStorage.removeItem('mira.cur');
+    /* 网页版 / 文件夹剧集的 curKey 是稳定键，mira.cur.src 却是 blob: 地址，
+       光比 src === key 会漏掉「当前这条」→ 刷新仍被拉回来。两种口径都认。 */
+    if (cur && (cur.src === key || (curKey === key && cur.src === curSrc))) {
+      localStorage.removeItem('mira.cur');
+    }
+    /* 第四个：文件夹续播点。删掉某集记录后 fres 还指着那部剧的话，
+       下次重开文件夹会又被拽回这一集 —— 同样属于「删了还在」。 */
+    var fres = loadFolderResume();
+    if (fres && fres.name && (key === fres.name || key.indexOf(fres.name + '/') === 0)) {
+      localStorage.removeItem('mira.fres');
+    }
   } catch (e) {}
   if (curKey === key) { curKey = ''; posMuteSrc = key; }
   paintHist();
@@ -1534,6 +1544,13 @@ function posCount(range) {
   var m = posAll(), lim = posLimit(range), n = 0, old = 0;
   for (var k in m) {
     if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
+    /* 只数主页真会列出来的那些（file:// 单集 / 文件夹相对路径）。
+       blob: 临时地址和「文件名|大小」这种会话内键点不动，算进条数会让
+       「共 N 条」和主页行数对不上，清空对话框也跟着说错。 */
+    if (k.indexOf('file://') !== 0 && k.indexOf('/') <= 0) continue;
+    /* 跟 histRows() 同口径：没有有效秒数的条目主页根本不画，别把它算进「共 N 条」 */
+    var tt = (m[k] && typeof m[k] === 'object') ? (m[k].t || 0) : (m[k] || 0);
+    if (!tt) continue;
     var w = posWhen(m[k]);
     if (!lim || w >= lim) n++;
     else if (!w) old++;
@@ -1542,7 +1559,18 @@ function posCount(range) {
 }
 function posClearRange(range) {
   var m = posAll(), lim = posLimit(range);
-  if (!lim) { try { localStorage.removeItem(POSKEY); } catch (e) {} return; }
+  if (!lim) {
+    /* 「清空播放记录」必须连根清：只删 mira.pos 的话，mira.cur / mira.last 还指着
+       那部片，一刷新 boot() 就把它自动拉回来 —— 用户看到的就是「删了还在」。
+       mira.fres 是文件夹的续播点，同理。字幕库不动：那是用户手动载入的资源。 */
+    try {
+      localStorage.removeItem(POSKEY);
+      localStorage.removeItem('mira.last');
+      localStorage.removeItem('mira.cur');
+      localStorage.removeItem('mira.fres');
+    } catch (e) {}
+    return;
+  }
   for (var k in m) {
     if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
     var w = posWhen(m[k]);
@@ -2032,7 +2060,7 @@ function paint() {
   var cur = v.currentTime || 0, tot = v.duration || 0;
   /* 拖动中 seek 是异步的：拿 v.currentTime 画条会滞后、跟手指来回弹。
      改成直接画手指位置，松手后才回到真实播放位置。 */
-  var p = dragging ? dragPct : (tot ? Math.min(100, cur / tot * 100) : 0);
+  var p = (dragging || scrubbing) ? dragPct : (tot ? Math.min(100, cur / tot * 100) : 0);
   sCur.style.width = p + '%';
   thumb.style.left = p + '%';
   sBuf.style.width = (tot && v.buffered.length ? Math.min(100, v.buffered.end(v.buffered.length - 1) / tot * 100) : 0) + '%';
@@ -2104,8 +2132,12 @@ function ccPut(el, txt) {
     el.appendChild(s);
     el.__sp = s;
   }
-  if (txt) { el.__sp.textContent = txt; el.classList.add('on'); }
-  else el.classList.remove('on');
+  /* 每个值先比对再写：paint() 每次 seek 都会调过来，字幕内容常常几十帧不变，
+     无脑写会让这两块带描边的字幕层反复重绘。 */
+  if (txt) {
+    if (el.__sp.textContent !== txt) el.__sp.textContent = txt;
+    if (!el.classList.contains('on')) el.classList.add('on');
+  } else if (el.classList.contains('on')) el.classList.remove('on');
 }
 function drawCC() {
   var now = v.currentTime || 0;
@@ -2283,6 +2315,7 @@ function swipeSpan() {
 }
 
 var scrubbing = false, wasPlaying = false, scrubTimer = null;
+var scrubT = -1;   /* 横滑时「手指指着的时间」：UI 画它，不等滞后的 v.currentTime */
 
 function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
 
@@ -2297,7 +2330,9 @@ function showHUDAt(t) {
   var c = fmt(t), tot = fmt(v.duration);
   if (hudCur.textContent !== c) hudCur.textContent = c;
   if (hudTot.textContent !== tot) hudTot.textContent = tot;
-  var w = Math.min(100, Math.max(0, t / v.duration * 100)) + '%';
+  /* 2% 一档：120px 的细条看不出 2.4px 的差别，却把这块带毛玻璃的 HUD
+     每帧重绘的次数砍掉一大半。主进度条不带毛玻璃，仍每帧精确跟手。 */
+  var w = (Math.round(Math.min(100, Math.max(0, t / v.duration * 100)) / 2) * 2) + '%';
   if (hudC.style.width !== w) hudC.style.width = w;
   if (!hud.classList.contains('on')) hud.classList.add('on');
   clearTimeout(hudTimer);
@@ -2305,17 +2340,24 @@ function showHUDAt(t) {
   if (scrubbing || v.paused) return;
   hudTimer = setTimeout(function () { hud.classList.remove('on'); }, 800);
 }
-function showHUD() { showHUDAt(v.currentTime || 0); }
+function showHUD() { showHUDAt(scrubT >= 0 ? scrubT : (v.currentTime || 0)); }
 
 function scrubStart() {
   if (scrubbing) return;
   scrubbing = true;
+  scrubT = clampT(v.currentTime || 0);
+  /* paint() 在 scrubbing 期间画的是 dragPct，先把起点写进去，
+     别让上一次拖条留下的旧值在第一个 rAF 之前闪一下。 */
+  var _d = isFinite(v.duration) ? v.duration : 0;
+  dragPct = _d ? Math.min(100, Math.max(0, scrubT / _d * 100)) : 0;
   wasPlaying = !v.paused;
   if (wasPlaying) v.pause();          /* 调节期间一律停住 —— 停住了才看得到真画面 */
+  hidePV();       /* 横滑也要停掉缩略图预览，别让第二个 video 跟着一起 seek */
 }
 function finishScrub() {
   if (!scrubbing) return;
   scrubbing = false;
+  scrubT = -1;
   if (seekRAF) { cancelAnimationFrame(seekRAF); seekRAF = 0; }
   /* 降频后可能还有没写出去的增量，松手时必须补上，不然最后一段划动会丢 */
   if (pendSec) { var s = pendSec; pendSec = 0; seekBy(s); }
@@ -2344,6 +2386,11 @@ function holdScrub() {
 var pendSec = 0, seekRAF = 0;
 function flushSeek() {
   seekRAF = 0;
+  /* ⚠️ UI 每帧跟手，跟「这一帧有没有真的 seek」无关。
+     以前横滑只靠 seekBy 之后 paint() 画 v.currentTime，而 seek 是异步的、
+     又被 90ms 降频拦着 —— 进度条就一跳一跳地追，看着就是「拖着卡」。
+     现在手指位置先画出来，真实 seek 照旧降频，两者彻底解耦。 */
+  if (scrubT >= 0) uiAt(scrubT);
   if (!pendSec) return;
   if (nowMs() - lastSeekAt < SEEK_MIN_GAP) {
     seekRAF = requestAnimationFrame(flushSeek);
@@ -2352,10 +2399,11 @@ function flushSeek() {
   lastSeekAt = nowMs();
   var s = pendSec; pendSec = 0;
   seekBy(s);
-  showHUD();
+  if (scrubT < 0) showHUD();
 }
 function queueSeek(sec) {
   pendSec += sec;
+  if (scrubT >= 0) scrubT = clampT(scrubT + sec);
   if (!seekRAF) seekRAF = requestAnimationFrame(flushSeek);
 }
 
@@ -2473,13 +2521,18 @@ function fullscreen() {
 
 /* ── 装载 ── */
 var pendingResume = 0;
-function load(src, label, subText, subName, idx, sub2Text, sub2Name) {
+function load(src, label, subText, subName, idx, sub2Text, sub2Name, keyHint) {
   srcFailed = false;
   document.body.classList.remove('hadError');
   posPut();
   curSrc = src;
-  /* 记忆键：文件夹多集用相对路径（稳定），file:// 单集用自身 url，blob: 单文件退回 url（跨刷新无效，仅会话内有效） */
-  curKey = (idx >= 0 && LIST[idx] && LIST[idx].k) ? LIST[idx].k : src;
+  /* 记忆键：文件夹多集用相对路径，file:// 单集用自身 url，网页版选的单个文件
+     用「文件名|字节数」这个稳定键 —— blob: URL 每次选文件都变，拿它当键的话
+     刷新后重新选同一部片也认不出上次的进度，等于记录白记。 */
+  curKey = (idx >= 0 && LIST[idx] && LIST[idx].k) ? LIST[idx].k : (keyHint || src);
+  /* 用户把这条记录删掉之后又主动重新打开 → 应当重新开始记，不能一直静音到关页面。
+     注意位置：必须在开头那次 posPut() 之后，否则刚删掉的旧片会被立刻写回去。 */
+  posMuteSrc = '';
   saveLast(src);             /* 真实文件路径记下来，刷新后能自动接着放 */
   curIdx = (typeof idx === 'number') ? idx : -1;
   /* 单文件 / 无目录上下文（curIdx<0）：清掉文件夹模式，否则 posPut 会把上一部剧的
@@ -2811,7 +2864,9 @@ window.addEventListener('keydown', function (e) {
       danger: 1,
       onOk: function () {
         posClearRange(0);
-        posMuteSrc = curSrc;          /* 当前这一集刚清掉，别马上又写回去 */
+        /* posPut() 拦的是 curKey，不是 curSrc。文件夹剧集 / 网页单文件两者不同，
+           用 curSrc 去拦等于没拦 —— 5 秒后当前这集又被写回 mira.pos，看着就是「没清干净」。 */
+        posMuteSrc = curKey || curSrc;
         paintHist();
         flash(t2('Watch history cleared', '播放记录已清空'));
       }
@@ -3037,7 +3092,8 @@ pick.onchange = function (e) {
   pick.value = '';                                  /* 允许再次选同一个文件 */
   if (files.length === 1) {
     LIST = []; buildList();
-    load(URL.createObjectURL(files[0]), epi(stem(files[0].name)));
+    load(URL.createObjectURL(files[0]), epi(stem(files[0].name)), '', '', -1, '', '',
+         files[0].name + '|' + files[0].size);
   } else {                                           /* 一次选多个 → 直接当播放列表 */
     var items = [];
     for (var j = 0; j < files.length; j++) items.push({ f: files[j], p: files[j].name });
@@ -3333,7 +3389,12 @@ if ('serviceWorker' in navigator &&
   });
 }
 
-boot();
+/* App 生成的播放页会在本脚本之后注入 window.__CAST__ 并主动调一次 CAST_BOOT()。
+   以前这里同步跑 boot()：先按 mira.cur 把「上一部片」装上来，紧接着注入脚本又
+   把新片装上 —— 同一帧里两次 v.src，既可能闪一下，也会把续播状态搅乱。
+   推到下一个宏任务：有注入就以 CAST_BOOT 那一次为准，没有注入（网页版）才自己起，
+   boot 全程只跑一次。判断用「属性是否存在」，空字符串也算注入过。 */
+setTimeout(function () { if (!('__CAST__' in window)) boot(); }, 0);
 </script>
 <!--CAST-->
 </body>
