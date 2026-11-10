@@ -2978,6 +2978,13 @@ function dragCommit() {
 }
 function endDrag(e) {
   if (!dragging) return;
+  /* 松手位置才算最终落位：快速一划时浏览器会合并 pointermove，最后一次 move
+     常常略早于 pointerup，直接拿它当终点会差几秒（实测最后一划差 2.4 秒）。
+     pointercancel 没有可信坐标，保持最后一次 move 不动。 */
+  if (e && e.type === 'pointerup' && typeof e.clientX === 'number' && isFinite(e.clientX)) {
+    var r = seek.getBoundingClientRect();
+    if (r.width > 0) dragLastT = clampT(posTime(e.clientX));
+  }
   dragCommit();
   dragging = false; seek.classList.remove('drag');
   if (e) { try { seek.releasePointerCapture(e.pointerId); } catch (err) {} }
