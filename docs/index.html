@@ -809,6 +809,7 @@
 
         <div class="hd">Audio</div>
         <div class="row"><span class="lb">Volume</span><input class="sl" type="range" min="0" max="100" step="1" data-k="vol"><b class="vl" data-v="vol"></b></div>
+        <div class="row"><span class="lb">Volume swipe<span class="hint">Two fingers up / down · Normal = up is louder</span></span><span class="sg" data-k="volDir"><button data-v="0">Normal</button><button data-v="1">Inverted</button></span></div>
         <div class="row"><span class="lb">Mute</span><button class="sw" data-k="muted"></button></div>
 
         <div class="hd">Appearance</div>
@@ -905,6 +906,7 @@
           <div><kbd>Left edge</kbd><span>Playlist</span></div>
           <div><kbd>Right edge</kbd><span>Settings</span></div>
           <div><kbd>Swipe ←→</kbd><span>Scrub · fingers down = stays paused</span></div>
+          <div><kbd>Swipe ↑↓</kbd><span>Volume</span></div>
           <div><kbd>⌥ + Swipe</kbd><span>Fine scrub (1/5 speed)</span></div>
           <div><kbd>Bar hover</kbd><span>Peek the frame</span></div>
           <div><kbd>Drag subtitle</kbd><span>Move it (free position on)</span></div>
@@ -1079,7 +1081,7 @@ var dragPendT = -1, dragRAF = 0, dragLastT = -1;
 var SETV = 9;   /* 设置结构版本号：改了 DEF 的含义就 +1，好让老存档能迁移过来 */
 var DEF = {
   lang: 1, rate: 1, holdRate: 2, step: 5, swipeDir: 0, opacity: 20,
-  autoNext: 1, vol: 100, muted: 0,
+  autoNext: 1, vol: 100, muted: 0, volDir: 0,
   ccOn: 1, cc2On: 0, sub1: 0, sub2: -1,
   /* 主字幕 / 辅字幕 —— 两套独立的参数，互不牵连。
      默认：主字幕在上、辅字幕在下（跟 B 站双字幕一致）；白字黑描边、无背景底板。 */
@@ -1186,6 +1188,8 @@ var ZH = {
   'Fingers vs bar · Normal = same way, Inverted = opposite': '手指和进度条 · 正常=同向，反向=相反',
   'Autoplay next episode': '自动连播下一集',
   'Volume': '音量', 'Mute': '静音',
+  'Volume swipe': '音量滑动方向',
+  'Two fingers up / down · Normal = up is louder': '触控板双指上下滑 · 正常 = 上滑变大',
   'Primary': '主字幕', 'Secondary': '辅字幕',
   'Shown at the bottom': '显示在画面底部', 'Stacked above the primary': '叠在主字幕上方', 'Top line': '上方一行', 'Bottom line': '下方一行',
   'Primary subtitle': '主字幕', 'Secondary subtitle': '辅字幕',
@@ -2355,13 +2359,46 @@ function queueSeek(sec) {
   if (!seekRAF) seekRAF = requestAnimationFrame(flushSeek);
 }
 
+/* ── 双指上下滑 = 音量 ──
+   左右是时间轴（横着走），上下是高低（竖着走）—— 跟「上=高、下=低」的本能一致。
+   用 deltaY 归一化，不按事件个数累加：触控板一秒上百个 wheel，每个 ±0.05 会一划到底；
+   按滑过的距离算才跟手。音量交给原有的 volumechange 自动存，不另起一套。
+   ⚠️ OSD 是毛玻璃，每个值先比对再写 DOM —— 高频重排会把视频层一起拖垮。 */
+var VOL_PX = 1000;      /* 累计滑 1000px ≈ 音量 0 → 100%；鼠标滚轮一格 ≈ 10% */
+function showVol(pct, muted) {
+  var s = (muted || pct <= 0) ? '🔇 0%' : '🔊 ' + pct + '%';
+  if (osdT.textContent !== s) osdT.textContent = s;
+  if (!osd.classList.contains('show')) osd.classList.add('show');
+  clearTimeout(osdTimer);
+  osdTimer = setTimeout(function () { osd.classList.remove('show'); osdAcc = 0; }, 600);
+}
+function volByWheel(dy) {
+  /* 默认跟手：手指往上推 → 音量往上走。macOS 默认「自然滚动」下这对应 deltaY > 0。
+     关了自然滚动、或用鼠标滚轮觉得反了 → 设置里「Volume swipe」拨到 Inverted。 */
+  var d = (dy / VOL_PX) * (SET.volDir ? -1 : 1);
+  var base = v.volume || 0;
+  var nv = Math.min(1, Math.max(0, base + d));
+  if (Math.abs(nv - base) > 0.0005) v.volume = nv;   /* volumechange 自动存 + 同步滑杆 */
+  if (v.muted && nv > 0) v.muted = false;             /* 一开始调就自动解除静音 */
+  showVol(Math.round(nv * 100), v.muted);
+}
+
 window.addEventListener('wheel', function (e) {
   if (!hasSrc || !isFinite(v.duration) || v.duration <= 0) return;
-  if (mask.classList.contains('on')) return;                     /* 弹窗开着 → 不拖进度 */
+  if (mask.classList.contains('on')) return;                     /* 弹窗开着 → 不接管手势 */
   var tg = e.target;
-  if (tg && tg.nodeType === 1 && (plist.contains(tg) || setp.contains(tg))) return;
-  var dx = e.deltaX || 0;
-  if (Math.abs(dx) < Math.abs(e.deltaY || 0) * 1.2) return;      /* 竖滑交给系统，不算拖进度 */
+  if (tg && tg.nodeType === 1 && (plist.contains(tg) || setp.contains(tg))) return;  /* 面板里让它自己滚 */
+  var dx = e.deltaX || 0, dy = e.deltaY || 0;
+  /* 主轴判定：横向明显 → 拖进度；否则 → 调音量。
+     以前竖滑直接 return 放给系统，可这页根本没有可滚内容，白白浪费一个手势。
+     竖滑不碰 scrubbing —— 调音量要边播边调，绝不能把片子暂停。 */
+  if (Math.abs(dx) < Math.abs(dy) * 1.2) {
+    if (Math.abs(dy) < 0.02) { showUI(); return; }
+    e.preventDefault();
+    volByWheel(dy);
+    showUI();
+    return;
+  }
   e.preventDefault();
 
   if (Math.abs(dx) < 0.02) { holdScrub(); showHUD(); return; }   /* 手还在板上，只是这一瞬没动 */
@@ -2833,10 +2870,17 @@ v.addEventListener('loadedmetadata', paint);
 v.addEventListener('timeupdate', function () { paint(); posTick(); });
 v.addEventListener('progress', paint);
 v.addEventListener('pause', function () { posPut(); showHUD(); });
+/* ⚠️ 触控板一秒能来上百个 wheel，音量跟着变就是上百次 volumechange。
+   每次都写 localStorage + 重排设置面板会把毛玻璃一起拖垮 —— 攒到手停下再存一次。
+   SET 本身每次同步更新，页面被关掉时 persistAll() 会补一次盘。 */
+var volSaveT = 0;
 v.addEventListener('volumechange', function () {
-  var pct = Math.round(v.volume * 100);
-  if (!v.muted && pct !== SET.vol) { SET.vol = pct; saveSet(); syncUI(); }
-  if (v.muted !== !!SET.muted) { SET.muted = v.muted ? 1 : 0; saveSet(); syncUI(); }
+  var pct = Math.round(v.volume * 100), changed = false;
+  if (!v.muted && pct !== SET.vol) { SET.vol = pct; changed = true; }
+  if (v.muted !== !!SET.muted) { SET.muted = v.muted ? 1 : 0; changed = true; }
+  if (!changed) return;
+  if (volSaveT) clearTimeout(volSaveT);
+  volSaveT = setTimeout(function () { volSaveT = 0; saveSet(); syncUI(); }, 120);
 });
 v.addEventListener('play', function () { started = true; tri.classList.remove('on'); showHUD(); });
 v.addEventListener('ended', function () {
@@ -2870,9 +2914,14 @@ v.addEventListener('error', function () {
     onCancel: function () { posDelete(bad); showHome(); }
   });
 });
-window.addEventListener('pagehide', posPut);
-window.addEventListener('beforeunload', posPut);
-document.addEventListener('visibilitychange', function () { if (document.hidden) posPut(); });
+/* 关页面 / 切后台时，把还没落盘的进度和音量一起补上 */
+function persistAll() {
+  posPut();
+  if (volSaveT) { clearTimeout(volSaveT); volSaveT = 0; saveSet(); }
+}
+window.addEventListener('pagehide', persistAll);
+window.addEventListener('beforeunload', persistAll);
+document.addEventListener('visibilitychange', function () { if (document.hidden) persistAll(); });
 
 /* ── 进度条：点一下跳、按住拖 ──
    ⚠️ 触控板 pointermove 一秒能来上百个。以前每个都直写 v.currentTime，
