@@ -15,7 +15,10 @@ SRC="$(cd "$(dirname "$0")" && pwd)/src"
 # ── 找 app ──
 APP="${MIRA_APP:-}"
 if [[ -z "$APP" ]]; then
-  for p in "$HOME/Applications/Mira.app" "/Applications/Mira.app" "$HOME/Documents/Mira/dist/Mira.app" "$HOME/Documents/Mira/Mira.app"; do
+  # ⚠️ 顺序要和 sync.sh 的 APP_LOCAL 一致：先认用户日常那份，
+  #    dist/Mira.app 只是构建副本，放最后兜底 —— 否则会拿副本去打包、还让
+  #    系统把两份都注册进「打开方式」（出现「Mira (1.0)」和「Mira」两条）。
+  for p in "$HOME/Documents/Mira.app" "$HOME/Applications/Mira.app" "/Applications/Mira.app" "$HOME/Documents/Mira/Mira.app" "$HOME/Documents/Mira/dist/Mira.app"; do
     [[ -d "$p" ]] && { APP="$p"; break; }
   done
 fi
@@ -50,5 +53,5 @@ echo "已重新签名（ad-hoc），校验通过"
 VER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null || echo 1.0)"
 OUT="${OUT:-$(cd "$(dirname "$0")" && pwd)/docs/Mira-$VER.zip}"
 mkdir -p "$(dirname "$OUT")"
-ditto -c -k --keepParent "$APP" "$OUT"
-echo "已生成 $OUT（$(du -h "$OUT" | cut -f1)）"
+ditto -c -k --keepParent --norsrc --noextattr "$APP" "$OUT"
+echo "已生成 $OUT（$(du -h "$OUT" | cut -f1)，单一 App、无 AppleDouble）"

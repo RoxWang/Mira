@@ -118,10 +118,16 @@ if [[ -f "$OUT" && -n "$PKG_APP" ]]; then
     NEED_ZIP=0
   fi
 fi
+#   包里若混进 ._ 开头的 AppleDouble 垃圾（旧版 ditto 默认会带），别人用
+#   Windows / Linux 解压会看到一堆莫名其妙的伴生文件 —— 一并强制重打成干净包。
+if [[ -f "$OUT" ]] && unzip -Z1 "$OUT" 2>/dev/null | grep -q '/\._'; then
+  NEED_ZIP=1
+fi
 if (( NEED_ZIP )); then
   [[ -n "$PKG_APP" ]] || { echo "没有可用的 App 包，无法重打发布包"; exit 1; }
-  ditto -c -k --keepParent "$PKG_APP" "$OUT"
-  note "[发布包] $OUT 已重打（$(du -h "$OUT" | cut -f1)）"
+  # --norsrc --noextattr：不带资源分支 / 扩展属性，zip 里只有一个干净的 Mira.app
+  ditto -c -k --keepParent --norsrc --noextattr "$PKG_APP" "$OUT"
+  note "[发布包] $OUT 已重打（$(du -h "$OUT" | cut -f1)，单一 App、无 AppleDouble）"
 else
   note "[发布包] $OUT 内容未变，跳过重打"
 fi
@@ -192,6 +198,31 @@ if (( PUSH && RELEASE )); then
     note "[GitHub Releases] ⚠️ 附件更新失败，重跑一次即可（仓库与网页已同步）"
   fi
 fi
+
+# ── 7. 本机「打开方式」去重 ──
+#   macOS 把每一份 Mira.app 都注册进 Launch Services：项目里的构建副本
+#   dist/Mira.app、废纸篓里删掉的旧版，都会留下记录。同名但版本不同的两条
+#   在「打开方式」里就显示成「Mira (1.0)」和「Mira」，用户以为装了两份。
+#   只保留日常在用那一份，其余（含已删文件的僵尸记录）一律注销。
+#   ⚠️ 只动明确的构建副本 / 废纸篓路径，不碰别人装在 /Applications 里的 App。
+dedupe_openwith() {
+  local LSREG="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
+  [[ -x "$LSREG" && -d "$APP_LOCAL" ]] || return 0
+  local p n=0
+  while IFS= read -r p; do
+    [[ -n "$p" ]] || continue
+    if [[ "$p" == "$ROOT/dist/"* || "$p" == "$HOME/.Trash/"* ]]; then
+      "$LSREG" -u -R "$p" 2>/dev/null || true
+      n=$((n + 1))
+    fi
+  done < <("$LSREG" -dump 2>/dev/null |
+           sed -n 's/^path:[[:space:]]*//p' |
+           sed 's/ (0x[0-9a-fA-F]*)$//' |
+           grep '/Mira\.app$')
+  "$LSREG" -R -f "$APP_LOCAL" 2>/dev/null || true   # 留下这份强制刷新，版本键一定是最新的
+  note "[本机注册] 「打开方式」只保留 $APP_LOCAL，清理 $n 条重复注册"
+}
+dedupe_openwith
 
 # ── 报告 ──
 echo ""

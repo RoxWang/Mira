@@ -1157,6 +1157,17 @@ function saveSet() {
     localStorage.setItem('mira.setv', String(SETV));
   } catch (e) {}
 }
+/* 拖设置滑杆时 input 一秒能来几十次，每次都同步写三份 localStorage + 全量重排面板，
+   毛玻璃会跟着一起卡。和音量那套同一口径：拖动中 120ms 合并一次，松手 / 关页面补一次。
+   SET 本身每次都同步更新，所以「拖着看」的效果一点不打折。 */
+var setSaveT = 0;
+function setSaveSoon() {
+  if (setSaveT) clearTimeout(setSaveT);
+  setSaveT = setTimeout(function () { setSaveT = 0; saveSet(); }, 120);
+}
+function flushSetSave() {
+  if (setSaveT) { clearTimeout(setSaveT); setSaveT = 0; saveSet(); }
+}
 
 /* ══ 语言：English / 简体中文 ══
    英文用欧美播放器那套日常说法（Playback / Subtitles / Scrub / Peek the frame…），
@@ -1975,8 +1986,8 @@ function fmt(s) {
 }
 function flash(txt) { showOSD(txt, false); }
 function showOSD(txt, sticky) {
-  osdT.textContent = txt;
-  osd.classList.add('show');
+  if (osdT.textContent !== txt) osdT.textContent = txt;   /* OSD 是毛玻璃，值没变别重绘 */
+  if (!osd.classList.contains('show')) osd.classList.add('show');
   clearTimeout(osdTimer);
   if (!sticky) osdTimer = setTimeout(function () { osd.classList.remove('show'); osdAcc = 0; }, 600);
 }
@@ -2263,7 +2274,14 @@ function subStoreGet(key) {
   var m = subStoreAll();
   return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : null;
 }
+/* 每次 syncUI 都把两个 <select> 清空重建，是拖动滑杆时最贵的一笔 DOM 重排。
+   只有字幕轨 / 选中项 / 语言真的变了才重建 —— 其余时候一个字节都不碰。 */
+var selsSig = '';
 function fillSels() {
+  var sig = TRACKS.map(function (x) { return x.n; }).join('\u0001') + '|' +
+            SET.sub1 + '|' + SET.sub2 + '|' + SET.lang;
+  if (sig === selsSig) return;
+  selsSig = sig;
   [sel1, sel2].forEach(function (sel, w) {
     var cur = w === 0 ? SET.sub1 : SET.sub2;
     while (sel.firstChild) sel.removeChild(sel.firstChild);
@@ -2679,20 +2697,26 @@ function syncUI() {
     if (el.classList.contains('sw')) {
       el.classList.toggle('on', !!val);
     } else if (el.classList.contains('sl')) {
-      el.value = val;
+      /* 每个值先比对再写：syncUI 会被开关 / 音量变化反复调用，
+         无脑赋值会让整块带毛玻璃的面板跟着重排。 */
+      var sv = String(val);
+      if (el.value !== sv) el.value = sv;
       var lb = setp.querySelector('b[data-v="' + k + '"]');
-      if (lb) lb.textContent = fmtVal(k, val);
+      var tx = fmtVal(k, val);
+      if (lb && lb.textContent !== tx) lb.textContent = tx;
     } else if (el.classList.contains('sg')) {
       var bs = el.getElementsByTagName('button');
       for (var j = 0; j < bs.length; j++)
         bs[j].classList.toggle('on', parseFloat(bs[j].getAttribute('data-v')) === parseFloat(val));
     } else if (el.classList.contains('st')) {
       var lb2 = el.querySelector('b[data-v]');
-      if (lb2) lb2.textContent = fmtVal(k, val);
+      var tx2 = fmtVal(k, val);
+      if (lb2 && lb2.textContent !== tx2) lb2.textContent = tx2;
     }
   }
   fillSels();
-  selAr.value = String(SET.aspect);
+  var ar = String(SET.aspect);
+  if (selAr.value !== ar) selAr.value = ar;
 }
 function rowLabel(el) {
   var r = el;
@@ -2716,20 +2740,29 @@ function setVal(k, val, quiet) {
   if (k === 'cc1Free' && val) freeInit(cc1, 'cc1X', 'cc1Y');
   if (k === 'cc2Free' && val) freeInit(cc2, 'cc2X', 'cc2Y');
   SET[k] = val;
-  saveSet();
+  if (quiet) {
+    setSaveSoon();                         /* 拖动中：攒着，120ms 合并写一次 */
+  } else {
+    if (setSaveT) { clearTimeout(setSaveT); setSaveT = 0; }
+    saveSet();                             /* 点开关 / 松手：立刻落盘 */
+  }
   if (k === 'lang') applyLang();
-  applySet();
-  if (!quiet) {
-    var el = setp.querySelector('[data-k="' + k + '"]');
-    var lb = el ? rowLabel(el) : '';
-    if (lb) {
-      if (el.classList.contains('sw')) flash(lb + ' ' + t(val ? 'on' : 'off'));
-      else if (el.classList.contains('sg')) flash(lb + ' · ' + fmtVal(k, val));
-      else flash(fmtVal(k, val));
-    }
+  applySet(quiet);                         /* 拖动中不整块重排设置面板 */
+  if (quiet) {
+    /* 只同步这一格右侧的数字 —— 气泡 + 这个数字就是全部反馈，不另弹 OSD */
+    var lb = setp.querySelector('b[data-v="' + k + '"]');
+    if (lb) { var tx = fmtVal(k, val); if (lb.textContent !== tx) lb.textContent = tx; }
+    return;
+  }
+  var el = setp.querySelector('[data-k="' + k + '"]');
+  var lbn = el ? rowLabel(el) : '';
+  if (lbn) {
+    if (el.classList.contains('sw')) flash(lbn + ' ' + t(val ? 'on' : 'off'));
+    else if (el.classList.contains('sg')) flash(lbn + ' · ' + fmtVal(k, val));
+    else flash(fmtVal(k, val));
   }
 }
-function applySet() {
+function applySet(skipSync) {
   applyCC();
   applyOpacity();
   layoutVideo();
@@ -2738,23 +2771,27 @@ function applySet() {
   if (SET.contrast !== 100) f.push('contrast(' + (SET.contrast / 100) + ')');
   if (SET.satur    !== 100) f.push('saturate(' + (SET.satur / 100) + ')');
   if (SET.hue      !== 0)   f.push('hue-rotate(' + SET.hue + 'deg)');
-  v.style.filter = f.join(' ');
-  v.playbackRate = fasting ? SET.holdRate : SET.rate;
+  var fs = f.join(' ');
+  if (v.style.filter !== fs) v.style.filter = fs;   /* 值没变就别碰，filter 会让视频层重新合成 */
+  var pr = fasting ? SET.holdRate : SET.rate;
+  if (v.playbackRate !== pr) v.playbackRate = pr;
   var vol = Math.max(0, Math.min(1, SET.vol / 100));
   if (Math.abs(v.volume - vol) > 0.001) v.volume = vol;
   if (v.muted !== !!SET.muted) v.muted = !!SET.muted;
-  syncUI();
+  if (!skipSync) syncUI();      /* 拖滑杆时跳过整块面板重排，由 setVal 只更新当前那一格 */
 }
 /* ══ 滑块拖动数值气泡：拖动中任意滑块时，在它正下方实时浮出数字（20%、40°…），松手消失 ══ */
 var slTipT = null;
 function showSlTip(el, k) {
   if (!el || !slTip) return;
   var r = el.getBoundingClientRect();
-  slTip.textContent = fmtVal(k, parseFloat(el.value));
-  slTip.style.left = (r.left + r.width / 2) + 'px';
-  slTip.style.top  = (r.bottom + 8) + 'px';
-  slTip.classList.add('on');
-  if (slTipT) clearTimeout(slTipT);
+  var tx = fmtVal(k, parseFloat(el.value));
+  if (slTip.textContent !== tx) slTip.textContent = tx;
+  var lx = (r.left + r.width / 2) + 'px', ty = (r.bottom + 8) + 'px';
+  if (slTip.style.left !== lx) slTip.style.left = lx;
+  if (slTip.style.top  !== ty) slTip.style.top  = ty;
+  if (!slTip.classList.contains('on')) slTip.classList.add('on');
+  if (slTipT) { clearTimeout(slTipT); slTipT = 0; }
 }
 function hideSlTip() {
   if (slTipT) clearTimeout(slTipT);
@@ -2811,7 +2848,13 @@ window.addEventListener('keydown', function (e) {
         el.addEventListener('click', function () { setVal(k, SET[k] ? 0 : 1); });
       } else       if (el.classList.contains('sl')) {
         el.addEventListener('input',  function () { setVal(k, parseFloat(el.value), true); showSlTip(el, k); });
-        el.addEventListener('change', function () { setVal(k, parseFloat(el.value)); hideSlTip(); });
+        el.addEventListener('change', function () {
+          /* 拖的时候数值气泡已经一直在显示，松手再弹一个一模一样的 OSD 是重复反馈。
+             这里只负责：值定下来、立刻落盘、气泡按时收起。 */
+          setVal(k, parseFloat(el.value), true);
+          flushSetSave();
+          hideSlTip();
+        });
       } else if (el.classList.contains('sg')) {
         var bs = el.getElementsByTagName('button');
         for (var j = 0; j < bs.length; j++) {
@@ -2972,7 +3015,11 @@ v.addEventListener('error', function () {
 /* 关页面 / 切后台时，把还没落盘的进度和音量一起补上 */
 function persistAll() {
   posPut();
-  if (volSaveT) { clearTimeout(volSaveT); volSaveT = 0; saveSet(); }
+  /* 音量 / 滑杆两条节流可能各留着一个没落盘的尾巴，关页面时一并补上 */
+  var need = false;
+  if (volSaveT) { clearTimeout(volSaveT); volSaveT = 0; need = true; }
+  if (setSaveT) { clearTimeout(setSaveT); setSaveT = 0; need = true; }
+  if (need) saveSet();
 }
 window.addEventListener('pagehide', persistAll);
 window.addEventListener('beforeunload', persistAll);
@@ -3215,7 +3262,13 @@ window.addEventListener('keydown', function (e) {
     if (e.repeat) {
       if (now - lastRepeat < 250) { e.preventDefault(); e.stopPropagation(); return; }
       lastRepeat = now; osdAcc -= SET.step;
-    } else { lastRepeat = now; osdAcc = -SET.step; }
+    } else {
+      /* 连着按也算「一直在往回退」，OSD 累计显示 −10s / −15s；
+         隔了 600ms 以上就当新的一轮，从 −5s 重新数。以前每次独立按下
+         都重置成 −5s，连按五下也看不出到底退了多少。 */
+      osdAcc = (now - lastRepeat < 600) ? osdAcc - SET.step : -SET.step;
+      lastRepeat = now;
+    }
     seekBy(-SET.step);
     flash('−' + Math.abs(osdAcc) + 's');
   } else if (k === 'ArrowUp' || k === 'ArrowDown') {
@@ -3239,6 +3292,7 @@ window.addEventListener('keydown', function (e) {
   } else if (k === 'l' || k === 'L') {
     if (e.repeat) { e.preventDefault(); return; }
     if (LIST.length > 0) openList(!plist.classList.contains('on'));
+    else flash(t2('No playlist', '没有播放列表'));   /* 单文件时按 L 要有回应，别像没反应 */
   } else if (k === 'Escape') {
     if (setp.classList.contains('on')) { openSet(false); e.preventDefault(); return; }
     if (plist.classList.contains('on')) { openList(false); e.preventDefault(); return; }
