@@ -20,13 +20,17 @@ self.addEventListener('install', function (e) {
 });
 
 self.addEventListener('activate', function (e) {
+  /* ⚠️ 这里故意不写 self.clients.claim()。
+     claim() 会让新 SW 立刻接管「已经打开、正在放片」的那个标签页。
+     虽然它不会重载页面、也不会碰 <video>，但没必要碰 —— Mira 的规矩是：
+     同步只能影响「下一次自己刷新 / 新开」的页面，绝不动正在看的人。
+     不 claim = 老页面继续由旧 SW（或干脆没 SW）管着，直到用户自己刷新才换。 */
   e.waitUntil(
     caches.keys()
       .then(function (keys) {
         return Promise.all(keys.filter(function (k) { return k !== CACHE; })
                                .map(function (k) { return caches.delete(k); }));
       })
-      .then(function () { return self.clients.claim(); })
       .catch(function () {})
   );
 });

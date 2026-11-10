@@ -78,6 +78,10 @@
 	<string>APPL</string>
 	<key>CFBundleSignature</key>
 	<string>dplt</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
 	<key>LSMinimumSystemVersionByArchitecture</key>
 	<dict>
 		<key>x86_64</key>
