@@ -882,7 +882,7 @@
       <div class="panePage" id="pane-keys">
         <div class="hd">Keyboard</div>
         <div class="keys">
-          <div><kbd>⌘</kbd><span>command</span></div>
+          <div><kbd>⌘ / Ctrl</kbd><span>modifier</span></div>
           <div><kbd>Space</kbd><span>Play / pause</span></div>
           <div><kbd>→ tap</kbd><span>Forward one step</span></div>
           <div><kbd>→ hold</kbd><span>Fast forward (2×)</span></div>
@@ -890,12 +890,12 @@
           <div><kbd>↑ ↓</kbd><span>Volume</span></div>
           <div><kbd>M</kbd><span>Mute</span></div>
           <div><kbd>F</kbd><span>Fullscreen</span></div>
-          <div><kbd>⌘ →</kbd><span>Next episode</span></div>
-          <div><kbd>⌘ ←</kbd><span>Previous episode</span></div>
+          <div><kbd>⌘/Ctrl →</kbd><span>Next episode</span></div>
+          <div><kbd>⌘/Ctrl ←</kbd><span>Previous episode</span></div>
           <div><kbd>L</kbd><span>Playlist</span></div>
           <div><kbd>O</kbd><span>Open window (home)</span></div>
-          <div><kbd>⌘ ,</kbd><span>Settings</span></div>
-          <div><kbd>C</kbd><span>Subtitles on / off</span></div>
+          <div><kbd>⌘/Ctrl ,</kbd><span>Settings</span></div>
+          <div><kbd>C</kbd><span>Subtitles on / off · no track = pick file</span></div>
           <div><kbd>S</kbd><span>Load a subtitle file</span></div>
           <div><kbd>Esc</kbd><span>Close panels</span></div>
         </div>
@@ -912,7 +912,7 @@
           <div><kbd>Drag subtitle</kbd><span>Move it (free position on)</span></div>
         </div>
 
-        <div class="hd">Watch history<span class="ih" tabindex="0">i<span class="tip">Stored on this Mac, inside Chrome: which episode you stopped at. It never touches your video files and never uploads anything.<b id="histCount"></b></span></span></div>
+        <div class="hd">Watch history<span class="ih" tabindex="0">i<span class="tip">Stored in this browser on your device: which episode you stopped at. It never touches your video files and never uploads anything. Switching browsers or clearing browser data clears it too.<b id="histCount"></b></span></span></div>
         <button class="btn warn" id="clearPos">Clear watch history</button>
 
         <div class="hd">Reset</div>
@@ -1183,7 +1183,7 @@ var ZH = {
   'Appearance': '外观',
   'Opacity': '不透明度',
   'Every panel and hint uses this · Apple Liquid Glass': '页面上所有面板和提示都跟着这个值走 · 苹果液态玻璃',
-  'Stored on this Mac, inside Chrome: which episode you stopped at. It never touches your video files and never uploads anything.': '存在本机 Chrome 里：每一集看到哪儿。不碰视频文件，也不上传。换浏览器或清 Chrome 数据会一起没。',
+  'Stored in this browser on your device: which episode you stopped at. It never touches your video files and never uploads anything. Switching browsers or clearing browser data clears it too.': '存在这台设备当前这个浏览器里：每一集看到哪儿。不碰视频文件，也不上传。换浏览器或清浏览器数据会一起没。',
   ' · nothing remembered yet': ' · 还没有记录',
   'Watch history': '播放记录',
   'Reset': '重置', 'Reset subtitles': '重置字幕',
@@ -1223,7 +1223,8 @@ var ZH = {
   'Play / pause': '播放 / 暂停', 'Forward one step': '前进一格',
   'Fast forward (2×)': '快进（2 倍速）', 'Back one step': '后退一格',
   'Fullscreen': '全屏', 'Next episode': '下一集', 'Previous episode': '上一集',
-  'Playlist': '播放列表', 'Subtitles on / off': '字幕开 / 关',
+  'Playlist': '播放列表', 'Subtitles on / off · no track = pick file': '字幕开 / 关 · 没字幕时选文件',
+  'modifier': '修饰键',
   'Load a subtitle file': '载入字幕文件', 'Close panels': '关闭面板',
   'Scrub': '拖进度', 'Peek the frame': '预览画面',
   'Clear watch history': '清空播放记录',
@@ -2901,8 +2902,8 @@ window.addEventListener('keydown', function (e) {
     askConfirm({
       title: t2('Clear watch history?', '清空播放记录？'),
       msg: t2('This forgets where you stopped in ' + c.n + (c.n === 1 ? ' video' : ' videos') +
-              '. It only lives on this Mac — your files are not touched.',
-              '会忘掉 ' + c.n + ' 个视频的播放位置。这些记录只存在本机，不动你的视频文件。'),
+              '. It only lives in this browser on your device — your files are not touched.',
+              '会忘掉 ' + c.n + ' 个视频的播放位置。这些记录只存在这台设备的浏览器里，不动你的视频文件。'),
       ok: t2('Clear', '清空'),
       danger: 1,
       onOk: function () {
@@ -2988,7 +2989,7 @@ v.addEventListener('ended', function () {
     setTimeout(function () { if (curIdx === nxt - 1) loadEntry(nxt); }, 900);
   }
 });
-/* 文件被移走 / 删了 / 编码 Chrome 不认：
+/* 文件被移走 / 删了 / 编码当前浏览器不认：
    以前只挂一条红字，人留在纯黑播放页，而返回键在闲置态又是藏起来的 —— 进得去出不来。
    现在立刻弹一个苹果式弹窗，两个出口都回主页；就算点弹窗外面关掉，
    body.hadError 也会让左上角「↩ 主页」常驻，兜住最后一条路。 */
@@ -3004,8 +3005,8 @@ v.addEventListener('error', function () {
   var bad = curKey || curSrc;
   askConfirm({
     title: t2("Can't open this video", '这个视频打不开'),
-    msg: t2('This file may have been moved or deleted, or its codec is not supported by Chrome.\nYou can remove this record so it stops showing up.',
-            '文件可能已被移动或删除，也可能是 Chrome 不支持这个编码。\n可以把这条记录删掉，以后就不再出现。'),
+    msg: t2('This file may have been moved or deleted, or its codec is not supported by this browser.\nYou can remove this record so it stops showing up.',
+            '文件可能已被移动或删除，也可能是当前浏览器不支持这个编码。\n可以把这条记录删掉，以后就不再出现。'),
     ok: t2('Back to Home', '返回主页'),
     cancel: t2('Remove this record', '从记录里移除'),
     onOk: function () { showHome(); },
@@ -3230,7 +3231,12 @@ var lastRepeat = 0;
 var metaAteRight = false;
 window.addEventListener('keydown', function (e) {
   if (dlgOpen()) return;                 /* 确认弹窗开着 → 播放器快捷键全部让路 */
-  if (e.metaKey && !e.ctrlKey && !e.altKey) {
+  /* ⚠️ Windows / Linux 没有 ⌘ 键，Ctrl 必须当成同一个修饰键。
+     以前这一段只认 e.metaKey，后面又有一句 `if (e.metaKey || e.ctrlKey || e.altKey) return;`
+     把 Ctrl 组合整批吞掉 —— 非 Mac 用户按 Ctrl+, 打不开设置、Ctrl+←/→ 切不了集。
+     输入框 / 下拉框里不接管，否则方向键选不了选项。 */
+  if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
     var mk = normKey(e);
     if (mk === ',') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) openSet(!setp.classList.contains('on')); return; }
     if (mk === 'ArrowRight') metaAteRight = true;

@@ -30,7 +30,7 @@
 <body>
 <div class="wrap">
   <h1>Mira — 怎么用</h1>
-  <p class="sub">极简本地视频播放器。视频在你自己硬盘上，不上传、不经过网络。</p>
+  <p class="sub">极简本地视频播放器。视频始终留在你本地，不上传、不经过网络。</p>
 
   <a class="cta" href="https://roxwang.github.io/Mira/">
     ▶ 免下载，直接用网页版
@@ -38,22 +38,23 @@
   </a>
 
   <h2>怎么用（一句话）</h2>
-  <p>打开上面的链接 → 点「打开视频」选文件（或拖进页面）→ 进度、设置、字幕都存在这台设备的浏览器里。<b>网页版下次打开要重新选一次同一个文件</b>（浏览器安全限制），选完就自动跳回上次看到的地方；想关掉再开直接续播、或双击视频文件就播，用下面的 Mac App（仅 macOS）。</p>
+  <p>打开上面的链接 → 点「打开视频」选文件（或拖进页面）→ 播放进度、设置和载入过的字幕都存在这台设备当前这个浏览器里。<b>网页版下次打开要重新选一次同一个文件</b>（浏览器安全限制），选完就自动跳回上次看到的地方。只有下面的 Mac App（仅 macOS）支持关掉再开直接续播，以及用视频文件直接打开。</p>
 
   <h2>四种方式，挑最适合你的</h2>
   <table>
     <tr><th>方式</th><th>适合谁</th><th>核心点（✓ 优点 / ✗ 注意）</th></tr>
-    <tr><td><b>网页版</b></td><td>所有人，首选</td><td>✓ 打开就用、不用装、永远最新、全平台<br>✗ 首次要联网（之后浏览器会缓存，可离线）；刷新后要重新选一次视频文件</td></tr>
+    <tr><td><b>网页版</b></td><td>所有人，首选</td><td>✓ 打开就用、不用装、有网时刷新就是最新版、电脑 / 手机 / 平板的主流浏览器都能开<br>✗ 首次要联网（之后页面会存一份离线缓存，可离线）；刷新后要重新选一次视频文件</td></tr>
     <tr><td>浏览器「安装为应用」</td><td>想有桌面图标、不占空间</td><td>✓ 和网页同一套，变成独立窗口<br>✗ 本质还是网页，首次要联网（之后可离线），不能双击视频文件直接开</td></tr>
-    <tr><td><b>Mac App</b>（仅 macOS）</td><td>Mac 用户，要双击直开 / 整季自动连 / 断网</td><td>✓ 双击视频就播、整季自动连、可设默认播放器、能离线<br>✗ 仅 macOS；首次打开会被 macOS 拦一下，点「仍要打开」即可</td></tr>
-    <tr><td><b>独立 HTML</b>（全平台）</td><td>Windows / Linux 想<b>断网</b>用、或想随身带一个文件</td><td>✓ 就一个文件、<b>断网也能用</b>、跨平台<br>✗ 要手动下载、手动选文件、更新需重新下</td></tr>
+    <tr><td><b>Mac App</b>（仅 macOS）</td><td>Mac 用户，要双击直开 / 整季自动连 / 断网</td><td>✓ 设为默认后，常见格式双击视频就播、整季自动连、能离线<br>✗ 仅 macOS；首次打开会被 macOS 拦一下，点「仍要打开」即可</td></tr>
+    <tr><td><b>独立 HTML</b>（桌面系统）</td><td>Windows / Linux / macOS 想<b>断网</b>用、或想随身带一个文件</td><td>✓ 就一个文件、<b>断网也能用</b>、跨系统<br>✗ 要手动下载、手动选文件、更新需重新下</td></tr>
   </table>
 
   <p class="note">⚠️ 四种里只有 <b>Mac App</b> 首次打开会被 macOS 弹窗拦一下（没上架 App Store），其余三种不会弹窗。</p>
+  <p class="note"><b>关于格式：</b> 能不能播取决于你的浏览器，Mira 只是把文件交给它。实测 mp4 / mov / mkv / webm 能播，avi / flv 不能播；rmvb / wmv 这类老格式通常也不被浏览器支持。打不开时会弹「这个视频打不开」的提示，不会黑屏卡住。</p>
 
   <h2>怎么弄（每一步）</h2>
   <p class="note">去 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> 后只下这两个，别的（Source code 那两个）是源码、普通人不用管：<br>
-  <code>Mira-1.0.zip</code> = Mac App（Mac 用户下这个）　·　<code>Mira-standalone.html</code> = 离线单文件播放器（Windows / Linux / 想断网的下这个）</p>
+  <code>Mira-1.0.zip</code> = Mac App（Mac 用户下这个）　·　<code>Mira-standalone.html</code> = 离线单文件播放器（Windows / Linux / macOS 想断网的下这个）</p>
   <ol>
     <li><b>网页版</b>：直接打开最上面的链接，完事。</li>
     <li><b>浏览器「安装为应用」</b>：打开链接 → 浏览器右上角菜单（Chrome / Edge 点 <code>⋮</code>）→「安装此站点为应用 / Install」→ 桌面出现图标。</li>
@@ -61,8 +62,8 @@
     <li><b>独立 HTML（断网 / 随身版）</b>：去 <a class="lk" href="https://github.com/RoxWang/Mira/releases">Releases</a> 下载 <code>Mira-standalone.html</code> → 双击（用默认浏览器打开）→ 点「打开视频」选文件就能看，断网也行。</li>
   </ol>
 
-  <p class="note">⚠️ <b>电脑上只留一份 <code>Mira.app</code>。</b> 升级时先把旧的拖进废纸篓再放新的，别让两份同时存在 —— 否则右键「打开方式」里会出现两个 Mira（一个带版本号、一个不带）。压缩包里本身就只有一个 App。如果已经出现两个，把旧的那份删掉、清空废纸篓即可。</p>
-  <p class="note">⚠️ <b>解压请双击 zip</b>（macOS 自带归档实用工具）。别用命令行 <code>unzip</code> 或第三方解压工具：压缩包里那些 <code>._</code> 开头的文件存着脚本的代码签名属性，不还原它们，App 会被系统判定「已损坏」。</p>
+  <p class="note">⚠️ <b>电脑上只留一份 <code>Mira.app</code>。</b> 升级时先把旧的拖进废纸篓再放新的，别让两份同时存在 —— 否则右键「打开方式」里会出现两个 Mira（一个带版本号、一个不带）。压缩包里只有一份 App。如果已经出现两个，把旧的那份删掉、清空废纸篓即可。</p>
+  <p class="note">⚠️ <b>解压请用 macOS 自带的归档实用工具双击 zip。</b> 压缩包里那些 <code>._</code> 开头的文件存着脚本的代码签名属性；命令行 <code>unzip</code> 不还原它们，部分第三方解压工具也不还原，App 会被系统判定「已损坏」。</p>
 
   <p class="note" style="margin-top:24px;text-align:center">源码与更新：<a class="lk" href="https://github.com/RoxWang/Mira">github.com/RoxWang/Mira</a></p>
 </div>
