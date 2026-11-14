@@ -1,21 +1,23 @@
 # Mira — 极简本地视频播放器
 
-**不是软件，是一个网页。** 视频永远在你自己硬盘上，不上传、不联网、不留副本。
+**本体是一个网页，不用安装。** 视频永远在你自己硬盘上，不上传、不经过网络、不留副本。
 
 👉 **直接用，不用下载：https://roxwang.github.io/Mira/**
+
+📖 想看图文步骤：[Mira · 怎么用](https://roxwang.github.io/Mira/help.html)
 
 ---
 
 ## 怎么用（一句话）
 
-打开上面的链接 → 点「打开视频」选文件（或直接把视频拖进页面）→ 看完关掉，下次自动接着播。手机、电脑、平板都一样。
+打开上面的链接 → 点「打开视频」选文件（或直接把视频拖进页面）→ 进度、设置、字幕都存在这台设备的浏览器里。**网页版下次打开要重新选一次同一个文件**（浏览器安全限制），选完就自动跳回上次看到的地方；想关掉再开直接续播、或双击视频文件就播，用下面的 Mac App（仅 macOS）。
 
 ## 四种方式，挑最适合你的
 
 | 方式 | 适合谁 | 核心点（✓ 优点 / ✗ 注意） |
 |---|---|---|
-| **网页版**（上面的链接） | 所有人，首选 | ✓ 打开就用、不用装、永远最新、全平台 ／ ✗ 首次要联网（之后浏览器会缓存，可离线） |
-| 浏览器「安装为应用」 | 想有桌面图标、不占空间 | ✓ 和网页同一套，变成独立窗口 ／ ✗ 本质还是网页，要联网，不能双击视频文件直接开 |
+| **网页版**（上面的链接） | 所有人，首选 | ✓ 打开就用、不用装、永远最新、全平台 ／ ✗ 首次要联网（之后浏览器会缓存，可离线）；刷新后要重新选一次视频文件 |
+| 浏览器「安装为应用」 | 想有桌面图标、不占空间 | ✓ 和网页同一套，变成独立窗口 ／ ✗ 本质还是网页，首次要联网（之后可离线），不能双击视频文件直接开 |
 | **Mac App**（仅 macOS） | Mac 用户，要双击直开 / 整季自动连 / 断网 | ✓ 双击视频就播、整季自动连、可设默认播放器、能离线 ／ ✗ 仅 macOS；首次打开会被 macOS 拦一下，点「仍要打开」即可 |
 | **独立 HTML**（全平台） | Windows / Linux 想**断网**用、或想随身带一个文件 | ✓ 就一个文件、**断网也能用**、跨平台 ／ ✗ 要手动下载、手动选文件、更新需重新下 |
 
@@ -35,4 +37,4 @@
 4. **独立 HTML（断网 / 随身版）**：去 [Releases](https://github.com/RoxWang/Mira/releases) 下载 `Mira-standalone.html` → 双击（用默认浏览器打开）→ 点「打开视频」选文件就能看，断网也行。
 
 ---
-Mira is a browser-based local video player. Open https://roxwang.github.io/Mira/ in any browser on Windows, macOS, iOS or Android, pick a local video, and it plays — no upload, no network, no cache. License: MIT
+Mira is a browser-based local video player. Open https://roxwang.github.io/Mira/ in any browser on Windows, macOS, iOS or Android, pick a local video, and it plays — your video is never uploaded or copied. The page needs internet on first visit and is then cached for offline use. License: MIT
