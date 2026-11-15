@@ -101,7 +101,10 @@ for APP in "$APP_DIST" "$APP_LOCAL"; do
   signed=0
   for try in 1 2 3; do
     xattr -cr "$APP" 2>/dev/null || true
-    codesign --force --deep -s - "$APP" >/dev/null 2>&1
+    # 这行必须 || true：set -e 下 codesign 偶发非零会当场杀掉整条同步链，
+    # 下面那三轮重试就永远轮不到（第一次跑曾静默停在第 3 步，日志只有两行）。
+    # 成败由紧随其后的 codesign -v 判定，失败就再清属性重签一轮。
+    codesign --force --deep -s - "$APP" >/dev/null 2>&1 || true
     if codesign -v "$APP" 2>/dev/null; then signed=1; break; fi
     /bin/sleep 0.3
   done
