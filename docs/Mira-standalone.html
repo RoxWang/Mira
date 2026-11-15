@@ -2469,24 +2469,51 @@ function volByWheel(dy) {
   showVol(Math.round(nv * 100), v.muted);
 }
 
+/* ── 一次手势只锁一条轴（IINA 的做法） ──
+   网页拿不到「双指抬起来」这个事件，只能用「多久没收到 wheel」当作手势结束。
+   手势刚开始先攒几像素判主轴；一旦选中 X 或 Y，本次手势内另一条轴的事件**一律忽略**。
+   斜着划、或惯性阶段 X/Y 主导来回变，都不会再出现「进度和音量一起动」。
+   ⚠️ 竖滑绝不碰 scrubbing：调音量要边播边调，不能把片子暂停。 */
+var AXIS_MIN = 6;          /* 攒够 6px 才定轴，起步那点抖动不至于把轴判反 */
+var wheelAxis = 0;         /* 0 = 未定轴；'x' = 本次只调进度；'y' = 本次只调音量 */
+var wheelAX = 0, wheelAY = 0;
+var wheelTimer = 0;
+function wheelGestureEnd() {
+  wheelAxis = 0;
+  wheelAX = wheelAY = 0;
+  if (scrubbing) finishScrub();   /* 横滑的结束窗口万一还没到，这里兜底 */
+}
+/* 每收到一次 wheel 就把「手势结束」往后推；窗口沿用横滑那一套（自适应） */
+function holdWheel() {
+  clearTimeout(wheelTimer);
+  wheelTimer = setTimeout(wheelGestureEnd, idleWin);
+}
+
 window.addEventListener('wheel', function (e) {
   if (!hasSrc || !isFinite(v.duration) || v.duration <= 0) return;
   if (mask.classList.contains('on')) return;                     /* 弹窗开着 → 不接管手势 */
   var tg = e.target;
   if (tg && tg.nodeType === 1 && (plist.contains(tg) || setp.contains(tg))) return;  /* 面板里让它自己滚 */
   var dx = e.deltaX || 0, dy = e.deltaY || 0;
-  /* 主轴判定：横向明显 → 拖进度；否则 → 调音量。
-     以前竖滑直接 return 放给系统，可这页根本没有可滚内容，白白浪费一个手势。
-     竖滑不碰 scrubbing —— 调音量要边播边调，绝不能把片子暂停。 */
-  if (Math.abs(dx) < Math.abs(dy) * 1.2) {
-    if (Math.abs(dy) < 0.02) { showUI(); return; }
-    e.preventDefault();
-    volByWheel(dy);
+  e.preventDefault();
+  holdWheel();
+
+  /* ① 起步定轴：只看累计位移，定了就锁死，直到双指离开（idle 超时）。
+        选轴阶段那几像素太小，丢掉不影响手感，也不重复计距离。 */
+  if (!wheelAxis) {
+    wheelAX += dx; wheelAY += dy;
+    if (Math.abs(wheelAX) < AXIS_MIN && Math.abs(wheelAY) < AXIS_MIN) { showUI(); return; }
+    wheelAxis = (Math.abs(wheelAX) >= Math.abs(wheelAY) * 1.2) ? 'x' : 'y';
+  }
+
+  /* ② 锁 Y：本次手势里 deltaX 再大也不碰进度条。 */
+  if (wheelAxis === 'y') {
+    if (Math.abs(dy) >= 0.02) volByWheel(dy);
     showUI();
     return;
   }
-  e.preventDefault();
 
+  /* ③ 锁 X：本次手势里 deltaY 再大也不碰音量，斜着划也一样。 */
   if (Math.abs(dx) < 0.02) { holdScrub(); showHUD(); return; }   /* 手还在板上，只是这一瞬没动 */
 
   var span = swipeSpan();
