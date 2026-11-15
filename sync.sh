@@ -93,9 +93,19 @@ for APP in "$APP_DIST" "$APP_LOCAL"; do
   /bin/cp -f "$ROOT/src/reel-launch" "$APP/Contents/MacOS/reel-launch"
   /bin/cp -f "$ROOT/src/Info.plist"  "$APP/Contents/Info.plist"
   /bin/chmod +x "$APP/Contents/Resources/castgen.pl" "$APP/Contents/MacOS/reel-launch"
-  xattr -cr "$APP" 2>/dev/null || true
-  codesign --force --deep -s - "$APP" >/dev/null 2>&1
-  codesign -v "$APP"
+  # ⚠️ reel-launch 是 zsh 脚本，ad-hoc 给它的签名存在扩展属性里。刚 cp 完立刻
+  #    --deep 重签，偶发会漏掉这个子签名（codesign -v 报 "code object is not
+  #    signed at all" in MacOS/reel-launch），以前会让整条同步链在半路停住：
+  #    第二个 App、zip、git、线上全没更新。清属性重签一次通常就好，最多三轮；
+  #    还不成就明确中止，绝不放一个半签名的 App 过去。
+  signed=0
+  for try in 1 2 3; do
+    xattr -cr "$APP" 2>/dev/null || true
+    codesign --force --deep -s - "$APP" >/dev/null 2>&1
+    if codesign -v "$APP" 2>/dev/null; then signed=1; break; fi
+    /bin/sleep 0.3
+  done
+  (( signed )) || { echo "❌ App 重签失败，已中止同步：$APP"; codesign -v "$APP"; exit 1; }
   note "[本机 App] $APP 已同步 + 重签"
   PKG_APP="$APP"
 done

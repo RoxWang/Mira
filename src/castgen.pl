@@ -82,11 +82,16 @@ my %OKCT = map { $_ => 1 } qw(mp4 m4v mov mkv webm ogv ogg 3gp 3g2 m4a mp3 flac 
 my %OKVC = map { lc($_) => 1 } qw(h264 avc avc1 vp8 vp9 av01 av1 hevc hvc1 hev1 mpeg4 mpeg4p2 theora);
 
 # ── 1. 直接读目录：有权限时最快，几十毫秒 ──
+# ⚠️ macOS 从 U 盘 / 压缩包 / 网络盘拷进来的文件，旁边会多一个 `._同名` 的
+#    AppleDouble 伴生文件，存扩展属性和代码签名（发布包签名也靠它）。它跟原视频
+#    同名、同扩展名，只有几百字节，却会被下面的扩展名正则当成视频收进列表 ——
+#    播放列表凭空多一倍，点开还报「这个视频打不开」。同理还有 .DS_Store。
+#    点开头的隐藏文件在 Finder 里根本看不见，一律不收。
 sub listByOpendir {
     my ($d) = @_;
     my @f = ();
     if (opendir(my $dh, $d)) {
-        @f = sort grep { /$VIDRE/ && -f "$d/$_" } readdir($dh);
+        @f = sort grep { /$VIDRE/ && !/^\./ && -f "$d/$_" } readdir($dh);
         closedir($dh);
     }
     return @f;
@@ -99,7 +104,7 @@ if (!@files) {
     # 并打上 blocked 标记 —— 页面据此告诉用户去哪里开权限
     $blocked = 1;
     (my $n = $video) =~ s{.*/}{};
-    @files = ($n) if $n =~ /$VIDRE/;
+    @files = ($n) if $n =~ /$VIDRE/ && $n !~ /^\./;
 }
 splice(@files, 400) if @files > 400;      # 文件夹再大也不做无限列表
 
