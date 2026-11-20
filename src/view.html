@@ -3193,7 +3193,9 @@ function beginPtrHold(e) {
   clearTimeout(holdPtrTimer);
   holdPtrTimer = setTimeout(function () {
     holdPtrTimer = null;
-    if (!hasSrc || fasting) return;
+    /* 定时器这 240ms 里状态可能变了：片源换了、弹窗弹出来了、键盘已经在快放。
+       全部复查一遍，别在弹窗里/换片后还把画面拉进快放。 */
+    if (!hasSrc || fasting || mask.classList.contains('on') || dlgOpen()) return;
     startFast();
     ptrFast = true;      /* 记下「这次快放是我起的」，松手时才知道要不要吞 click */
   }, PTR_HOLD_MS);
@@ -3410,7 +3412,10 @@ window.addEventListener('keyup', function (e) {
   var ate = metaAteRight;
   metaAteRight = false;
   if (ate || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (fasting) { stopFast(); return; }
+  /* 方向键松开只结束「方向键自己发起的」快放。
+     若此刻是鼠标/触控板按住发起的快放（ptrFast），方向键 keyup 不该掐断它 ——
+     两种输入方式并存，谁发起的谁负责收尾，互不抢状态。 */
+  if (fasting && !ptrFast) { stopFast(); return; }
   if (hasSrc) { seekBy(SET.step); flash('+' + SET.step + 's'); }
 }, true);
 
