@@ -495,6 +495,33 @@
   }
   #osd.show { opacity: 1; }
 
+  /* ── 续播起点提示：贴顶中央、胶囊 + 一条细进度，礼貌闪一下就淡出 ──
+     为什么不在画面中央/底部：中间是画面、底部是字幕，这是本项目定死的布局红线。
+     贴顶跟 OSD 同一套毛玻璃参数，视觉一致；独立元素，不会被普通 flash 挤掉。
+     pointer-events:none 保证它绝不吃鼠标事件（键鼠/触控板用户都无感）。 */
+  #resumeTip {
+    position: absolute; left: 0; right: 0; top: 46px;
+    display: flex; flex-direction: column; align-items: center;
+    pointer-events: none; opacity: 0; z-index: 21;
+    transform: translateY(-6px); transition: opacity .45s ease, transform .45s ease;
+  }
+  #resumeTip.show { opacity: 1; transform: translateY(0); }
+  #resumeTip .rtCap {
+    background: rgba(0,0,0, var(--op));
+    -webkit-backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
+    backdrop-filter: blur(var(--oblur)) brightness(var(--obr));
+    border: 1px solid rgba(255,255,255,.10); border-radius: 999px;
+    padding: 6px 15px; font-size: 13px; font-weight: 500;
+    font-variant-numeric: tabular-nums; color: #f2f4f7; letter-spacing: .3px;
+    white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+  }
+  #resumeBar {
+    width: 116px; height: 3px; margin-top: 7px; border-radius: 2px;
+    background: rgba(255,255,255,.22); overflow: hidden;
+  }
+  #resumeFill { display: block; height: 100%; width: 0; background: rgba(255,255,255,.85); border-radius: 2px; }
+
   /* ── 拖进度 HUD：左上角，跟 IINA 一个位置、一个样 ──
      上面一行「当前时间 / 总时长」，下面一条细进度。
      为什么放左上角：中间是画面、底部是字幕、顶上一条通常是天空或黑边 —— 最不挡观看。 */
@@ -897,6 +924,7 @@
           <div><kbd>⌘/Ctrl ,</kbd><span>Settings</span></div>
           <div><kbd>C</kbd><span>Subtitles on / off · no track = pick file</span></div>
           <div><kbd>S</kbd><span>Load a subtitle file</span></div>
+          <div><kbd>, / .</kbd><span>Subtitle delay −/+ 0.25s</span></div>
           <div><kbd>Esc</kbd><span>Close panels</span></div>
         </div>
         <div class="hd">Mouse &amp; trackpad</div>
@@ -939,6 +967,7 @@
   </div>
 
   <div id="osd"><span id="osdTxt"></span></div>
+  <div id="resumeTip"><span class="rtCap" id="resumeTxt"></span><div id="resumeBar"><i id="resumeFill"></i></div></div>
   <div id="hud"><span id="hudState">❚❚</span><span id="hudCur">0:00</span><div id="hudB"><i id="hudC"></i></div><span id="hudTot">0:00</span></div>
   <div id="homeBtn" title="返回主页（快捷键 O）">↩ 主页</div>
   <div id="warn">No file received — drag a video into this window to play it.</div>
@@ -1067,6 +1096,23 @@ var holdTimer = null, fasting = false, started = false;
 /* 左键 / 触控板按压长按 → 快放：和键盘长按共用 startFast/stopFast 与同一份 holdRate。
    swallowClick 吞掉松手后浏览器补发的 click，避免长按结束误触发播放/暂停。 */
 var holdPtrTimer = null, ptrFast = false, swallowClick = false;
+var resumeTip = document.getElementById('resumeTip');
+var resumeTxt = document.getElementById('resumeTxt');
+var resumeFill = document.getElementById('resumeFill');
+var resumeTimer = null;
+/* 续播提示：淡入 → 停 2.5s → 淡出。跟 OSD 不同，它带一条标注续播位置的细进度。
+   sticky=false 的普通 flash 只停 600ms，续播这个信息值得多看两眼，所以单独给时长。 */
+function showResumeTip(t, d) {
+  resumeTxt.textContent = t2('Resume from ', '从 ') + fmt(t) + t2('', ' 继续');
+  resumeFill.style.width = (d ? Math.min(100, Math.max(0, t / d * 100)) : 0) + '%';
+  resumeTip.classList.add('show');
+  clearTimeout(resumeTimer);
+  resumeTimer = setTimeout(function () { resumeTip.classList.remove('show'); }, 2500);
+}
+function hideResumeTip() {
+  clearTimeout(resumeTimer);
+  resumeTip.classList.remove('show');
+}
 var idleTimer = null;
 var dragging = false;
 
@@ -1225,6 +1271,7 @@ var ZH = {
   'Normal': '正常', 'Inverted': '反向',
   'Sans': '无衬线', 'Serif': '衬线', 'Mono': '等宽',
   'Play / pause': '播放 / 暂停', 'Forward one step': '前进一格',
+  'Subtitle delay −/+ 0.25s': '字幕提前 / 推后 0.25 秒',
   'Fast forward (hold rate in Settings)': '快进（倍速见设置）', 'Back one step': '后退一格',
   'Fullscreen': '全屏', 'Next episode': '下一集', 'Previous episode': '上一集',
   'Playlist': '播放列表', 'Subtitles on / off · no track = pick file': '字幕开 / 关 · 没字幕时选文件',
@@ -1996,6 +2043,7 @@ function showHome() {
   v.classList.add('off');
   document.body.classList.remove('idle');
   document.title = 'Mira';
+  hideResumeTip();
   paintHome();
 }
 
@@ -2591,6 +2639,7 @@ function fullscreen() {
 /* ── 装载 ── */
 var pendingResume = 0;
 function load(src, label, subText, subName, idx, sub2Text, sub2Name, keyHint) {
+  hideResumeTip();     /* 上一部片的续播提示别串到这一部 */
   srcFailed = false;
   document.body.classList.remove('hadError');
   posPut();
@@ -2656,7 +2705,7 @@ v.addEventListener('loadedmetadata', function () {
   if (!isFinite(d) || d < 60) return;
   if (t > d - 15 || t < 10) return;
   v.currentTime = t;
-  flash(t2('Resume ', '接着上次 ') + fmt(t));
+  showResumeTip(t, d);
 });
 v.addEventListener('resize', layoutVideo);
 /* 窗口缩放是连续触发的 —— 收手后 220ms 补算一次几何就够 */
@@ -3391,6 +3440,15 @@ window.addEventListener('keydown', function (e) {
   } else if (k === 's' || k === 'S') {
     if (e.repeat) { e.preventDefault(); return; }
     pickSub.click();
+  } else if (k === ',' || k === '.') {
+    /* 字幕延迟微调：, 提前 / . 推后，一格 0.25s，范围跟设置面板一致（±5s）。
+       ⌘/Ctrl+, 是「设置」，在前面的修饰键分支已 return，这里只接单独的 , 和 .
+       调的是主字幕（cc1Delay）；辅字幕在设置面板里调，避免两条快捷键把人搞晕。 */
+    var dk = (k === ',') ? -0.25 : 0.25;
+    var nv = Math.round((SET.cc1Delay + dk) * 100) / 100;
+    if (nv < -5) nv = -5; if (nv > 5) nv = 5;
+    if (nv !== SET.cc1Delay) setVal('cc1Delay', nv);
+    flash(t2('Subtitle delay ', '字幕延迟 ') + (nv > 0 ? '+' : '') + nv + 's');
   } else if (k === 'l' || k === 'L') {
     if (e.repeat) { e.preventDefault(); return; }
     if (LIST.length > 0) openList(!plist.classList.contains('on'));
