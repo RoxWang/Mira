@@ -1063,6 +1063,9 @@ var TRACKS = [];                       /* 字幕轨：[{n: 名字, cues: [...]}]
 var hasSrc = false;
 var warnTimer = null, osdTimer = null, osdAcc = 0;
 var holdTimer = null, fasting = false, started = false;
+/* 左键 / 触控板按压长按 → 快放：和键盘长按共用 startFast/stopFast 与同一份 holdRate。
+   swallowClick 吞掉松手后浏览器补发的 click，避免长按结束误触发播放/暂停。 */
+var holdPtrTimer = null, ptrFast = false, swallowClick = false;
 var idleTimer = null;
 var dragging = false;
 
@@ -3167,8 +3170,50 @@ seek.addEventListener('pointercancel', endDrag);
 seek.addEventListener('pointerleave', function () { if (!dragging) { hidePV(); paint(); } });
 
 /* ── 画面上：单击播放/暂停，双击全屏 ── */
-v.addEventListener('click', function () { if (hasSrc) toggle(); });
+v.addEventListener('click', function () {
+  /* 长按松手时浏览器会补发一次 click：那是快放结束，不是「又点了一下画面」。
+     吞掉它，否则长按完立刻暂停；short click（没触发快放）照常 toggle。 */
+  if (swallowClick) { swallowClick = false; return; }
+  if (hasSrc) toggle();
+});
 v.addEventListener('dblclick', function () { fullscreen(); });
+
+/* ── 左键 / 触控板按压长按 → 2× 快放 ──
+   触控板按下去（click）浏览器给的就是 pointerdown(button=0) + pointerup，
+   所以鼠标和触控板共用这一套，不另起分支。
+   ⚠️ 只挂在画面 v 上：进度条、按钮、面板、字幕都不是 v 的直接目标，
+   事件靠 target 判定后放行，键鼠用户点这些地方完全不受影响。
+   ⚠️ 右键菜单里的原生右键（button=2）不接管，留给它自己。 */
+var PTR_HOLD_MS = 240;   /* 比键盘 220 略宽：鼠标按下有轻微抖动，短按不会误触发 */
+function beginPtrHold(e) {
+  swallowClick = false;   /* 新的一次按压：先清掉上次可能没被 click 消费掉的标志 */
+  if (e.button !== 0 || !hasSrc) return;
+  if (mask.classList.contains('on') || dlgOpen()) return;   /* 弹窗开着不接管 */
+  if (e.target !== v) return;                                /* 只认画面本身，放过 HUD/按钮/字幕 */
+  clearTimeout(holdPtrTimer);
+  holdPtrTimer = setTimeout(function () {
+    holdPtrTimer = null;
+    if (!hasSrc || fasting) return;
+    startFast();
+    ptrFast = true;      /* 记下「这次快放是我起的」，松手时才知道要不要吞 click */
+  }, PTR_HOLD_MS);
+}
+function endPtrHold() {
+  clearTimeout(holdPtrTimer);
+  holdPtrTimer = null;
+  if (!ptrFast) return;
+  ptrFast = false;
+  stopFast();
+  swallowClick = true;   /* pointerup 后紧跟的 click 属于长按收尾，吞掉 */
+}
+v.addEventListener('pointerdown', beginPtrHold);
+/* pointerup 挂在 window：拖出画面松手也能收到，绝不卡在 2× */
+window.addEventListener('pointerup', endPtrHold);
+window.addEventListener('pointercancel', endPtrHold);
+window.addEventListener('blur', function () {
+  clearTimeout(holdPtrTimer); holdPtrTimer = null;
+  if (ptrFast) { ptrFast = false; stopFast(); }
+});
 
 /* ── 拖放 / 选择 ── */
 drop.onclick = function () { pick.click(); };
